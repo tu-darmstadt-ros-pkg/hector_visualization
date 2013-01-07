@@ -1,0 +1,14 @@
+<stack>
+  <description brief="hector_visualization">
+    The hector_visualization stack is a collection of packages that provide some sort of
+    visualization add-ons, e.g. rviz plugins for message types used in other hector packages.
+  </description>
+  <author>Johannes Meyer</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/hector_visualization</url>
+
+  <depend stack="common_msgs" />
+  <depend stack="visualization" />
+
+</stack>

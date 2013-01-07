@@ -1,0 +1,9 @@
+<library path="lib/libhector_rviz_plugins">
+  <class name="hector_rviz_plugins/Vector3"
+         type="hector_rviz_plugins::Vector3Display"
+         base_class_type="rviz::Display">
+    <description>
+      Displays geometry_msgs/Vector3Stamped messages.
+    </description>
+  </class>
+</library>
