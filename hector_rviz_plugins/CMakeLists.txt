@@ -4,7 +4,7 @@
 ## First start with some standard ROS stuff.
 cmake_minimum_required(VERSION 2.4.6)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-set(ROS_BUILD_TYPE RelWithDebInfo)
+#set(ROS_BUILD_TYPE RelWithDebInfo)
 rosbuild_init()
 
 ## This plugin includes Qt widgets, so we must include Qt like so:
@@ -18,13 +18,13 @@ add_definitions(-DQT_NO_KEYWORDS)
 ## Here we specify which header files need to be run through "moc",
 ## Qt's meta-object compiler.
 qt4_wrap_cpp(MOC_FILES
+  src/vector3_display.h
 )
 
 ## Here we specify the list of source files, including the output of
 ## the previous command which is stored in ``${MOC_FILES}``.
 set(SOURCE_FILES
   src/vector3_display.cpp
-  src/vector3_visual.cpp
   ${MOC_FILES}
 )
 

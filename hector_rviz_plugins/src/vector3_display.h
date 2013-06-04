@@ -27,132 +27,96 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VECTOR3_DISPLAY_H
-#define VECTOR3_DISPLAY_H
+#ifndef HECTOR_RVIZ_PLUGINS_VECTOR3_DISPLAY_H
+#define HECTOR_RVIZ_PLUGINS_VECTOR3_DISPLAY_H
 
+#include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
+
+#ifndef Q_MOC_RUN
 #include <message_filters/subscriber.h>
 #include <tf/message_filter.h>
+#endif
+
 #include <geometry_msgs/Vector3Stamped.h>
+
 #include <rviz/display.h>
+
+namespace rviz
+{
+class Arrow;
+class ColorProperty;
+class FloatProperty;
+class StringProperty;
+class IntProperty;
+class RosTopicProperty;
+class TfFrameProperty;
+}
 
 namespace Ogre
 {
-class SceneNode;
+class Vector3;
+class Quaternion;
 }
 
-// All the source in this plugin is in its own namespace.  This is not
-// required but is good practice.
 namespace hector_rviz_plugins
 {
 
-class Vector3Visual;
+using namespace rviz;
 
-// BEGIN_TUTORIAL
-// Here we declare our new subclass of rviz::Display.  Every display
-// which can be listed in the "Displays" panel is a subclass of
-// rviz::Display.
-//
-// Vector3Display will show a 3D arrow showing the direction and magnitude
-// of the IMU acceleration vector.  The base of the arrow will be at
-// the frame listed in the header of the Vector3 message, and the
-// direction of the arrow will be relative to the orientation of that
-// frame.  It will also optionally show a history of recent
-// acceleration vectors, which will be stored in a circular buffer.
-//
-// The Vector3Display class itself just implements the circular buffer,
-// editable parameters, and Display subclass machinery.  The visuals
-// themselves are represented by a separate class, Vector3Visual.  The
-// idiom for the visuals is that when the objects exist, they appear
-// in the scene, and when they are deleted, they disappear.
 class Vector3Display: public rviz::Display
 {
+Q_OBJECT
 public:
-  // Constructor.  pluginlib::ClassLoader creates instances by calling
-  // the default constructor, so make sure you have one.
   Vector3Display();
   virtual ~Vector3Display();
 
-  // Overrides of public virtual functions from the Display class.
+  // Overrides from Display
   virtual void onInitialize();
   virtual void fixedFrameChanged();
+  virtual void update( float wall_dt, float ros_dt );
   virtual void reset();
-  virtual void createProperties();
 
-  // Setter and getter functions for user-editable properties.
-  void setTopic(const std::string& topic);
-  const std::string& getTopic() { return topic_; }
-
-  void setColor( const rviz::Color& color );
-  const rviz::Color& getColor() { return color_; }
-
-  void setAlpha( float alpha );
-  float getAlpha() { return alpha_; }
-
-  void setHistoryLength( int history_length );
-  int getHistoryLength() const { return history_length_; }
-
-  void setFrameOfOrigin(const std::string& frame_of_origin);
-  const std::string& getFrameOfOrigin() { return frame_of_origin_; }
-
-  void setScale( float scale );
-  float getScale() { return scale_; }
-
-  // Overrides of protected virtual functions from Display.  As much
-  // as possible, when Displays are not enabled, they should not be
-  // subscribed to incoming data and should not show anything in the
-  // 3D view.  These functions are where these connections are made
-  // and broken.
 protected:
+  // overrides from Display
   virtual void onEnable();
   virtual void onDisable();
 
-  // Function to handle an incoming ROS message.
-private:
-  void incomingMessage( const geometry_msgs::Vector3Stamped::ConstPtr& msg );
+private Q_SLOTS:
+  void updateColor();
+  void updateTopic();
+  void updateOriginFrame();
+  void updateScale();
+  void updateLength();
 
-  // Internal helpers which do the work of subscribing and
-  // unsubscribing from the ROS topic.
+private:
   void subscribe();
   void unsubscribe();
-
-  // A helper to clear this display back to the initial state.
   void clear();
 
-  // Helper function to apply color and alpha to all visuals.
-  void updateColorAndAlpha();
+  void incomingMessage( const geometry_msgs::Vector3Stamped::ConstPtr& message );
+  void transformArrow( const geometry_msgs::Vector3Stamped::ConstPtr& message, Arrow* arrow );
 
-  // Storage for the list of visuals.  This display supports an
-  // adjustable history length, so we need one visual per history
-  // item.
-  std::vector<Vector3Visual*> visuals_;
+  typedef std::deque<Arrow*> D_Arrow;
+  D_Arrow arrows_;
 
-  // A node in the Ogre scene tree to be the parent of all our visuals.
-  Ogre::SceneNode* scene_node_;
+  uint32_t messages_received_;
 
-  // Data input: Subscriber and tf message filter.
+  boost::shared_ptr<Ogre::Vector3> last_position_;
+  boost::shared_ptr<Ogre::Quaternion> last_orientation_;
+  
   message_filters::Subscriber<geometry_msgs::Vector3Stamped> sub_;
   tf::MessageFilter<geometry_msgs::Vector3Stamped>* tf_filter_;
-  int messages_received_;
 
-  // User-editable property variables.
-  rviz::Color color_;
-  std::string topic_;
-  float alpha_;
-  int history_length_;
-  std::string frame_of_origin_;
-  float scale_;
-
-  // Property objects for user-editable properties.
-  rviz::ColorPropertyWPtr color_property_;
-  rviz::ROSTopicStringPropertyWPtr topic_property_;
-  rviz::FloatPropertyWPtr alpha_property_;
-  rviz::IntPropertyWPtr history_length_property_;
-  rviz::TFFramePropertyWPtr frame_of_origin_property_;
-  rviz::FloatPropertyWPtr scale_property_;
+  ColorProperty* color_property_;
+  RosTopicProperty* topic_property_;
+  TfFrameProperty* origin_frame_property_;
+  FloatProperty* scale_property_;
+  FloatProperty* position_tolerance_property_;
+  FloatProperty* angle_tolerance_property_;
+  IntProperty* keep_property_;
 };
-// END_TUTORIAL
 
 } // end namespace hector_rviz_plugins
 
-#endif // IMU_DISPLAY_H
-// %EndTag(FULL_SOURCE)%
+#endif // HECTOR_RVIZ_PLUGINS_VECTOR3_DISPLAY_H

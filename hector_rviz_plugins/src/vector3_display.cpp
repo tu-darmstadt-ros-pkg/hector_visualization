@@ -27,215 +27,156 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <OGRE/OgreSceneNode.h>
-#include <OGRE/OgreSceneManager.h>
+
+#include <boost/bind.hpp>
 
 #include <tf/transform_listener.h>
 
-#include <rviz/visualization_manager.h>
-#include <rviz/properties/property.h>
-#include <rviz/properties/property_manager.h>
-#include <rviz/frame_manager.h>
+#include "rviz/frame_manager.h"
+#include "rviz/ogre_helpers/arrow.h"
+#include "rviz/properties/color_property.h"
+#include "rviz/properties/float_property.h"
+#include "rviz/properties/int_property.h"
+#include "rviz/properties/ros_topic_property.h"
+#include "rviz/properties/tf_frame_property.h"
+#include "rviz/validate_floats.h"
+#include "rviz/display_context.h"
 
-#include "vector3_visual.h"
 #include "vector3_display.h"
 
 namespace hector_rviz_plugins
 {
 
-// BEGIN_TUTORIAL
-// The constructor must have no arguments, so we can't give the
-// constructor the parameters it needs to fully initialize.
 Vector3Display::Vector3Display()
   : Display()
-  , scene_node_( NULL )
   , messages_received_( 0 )
-  , color_( .8, .2, .8 )       // Default color is bright purple.
-  , alpha_( 1.0 )              // Default alpha is completely opaque.
-  , scale_( 1.0 )
 {
-}
+  topic_property_ = new RosTopicProperty( "Topic", "",
+                                          QString::fromStdString( ros::message_traits::datatype<geometry_msgs::Vector3Stamped>() ),
+                                          "geometry_msgs::Vector3Stamped topic to subscribe to.",
+                                          this, SLOT( updateTopic() ));
 
-// After the parent rviz::Display::initialize() does its own setup, it
-// calls the subclass's onInitialize() function.  This is where we
-// instantiate all the workings of the class.
-void Vector3Display::onInitialize()
-{
-  // Make an Ogre::SceneNode to contain all our visuals.
-  scene_node_ = scene_manager_->getRootSceneNode()->createChildSceneNode();
-  
-  // Set the default history length and resize the ``visuals_`` array.
-  setHistoryLength( 1 );
+  color_property_ = new ColorProperty( "Color", QColor( 0, 25, 255 ),
+                                       "Color of the arrows.",
+                                       this, SLOT( updateColor() ));
 
-  // A tf::MessageFilter listens to ROS messages and calls our
-  // callback with them when they can be matched up with valid tf
-  // transform data.
-  tf_filter_ =
-    new tf::MessageFilter<geometry_msgs::Vector3Stamped>( *vis_manager_->getTFClient(),
-                                             "", 100, update_nh_ );
-  tf_filter_->connectInput( sub_ );
-  tf_filter_->registerCallback( boost::bind( &Vector3Display::incomingMessage,
-                                             this, _1 ));
+  origin_frame_property_ = new TfFrameProperty( "Origin Frame", "base_link",
+                                                "Frame that defines the origin of the vector.",
+                                                this,
+                                                0, true,
+                                                SLOT( updateOriginFrame() ));
 
-  // FrameManager has some built-in functions to set the status of a
-  // Display based on callbacks from a tf::MessageFilter.  These work
-  // fine for this simple display.
-  vis_manager_->getFrameManager()
-    ->registerFilterForTransformStatusCheck( tf_filter_, this );
+  position_tolerance_property_ = new FloatProperty( "Position Tolerance", .1,
+                                                    "Distance, in meters from the last arrow dropped, "
+                                                    "that will cause a new arrow to drop.",
+                                                    this );
+  position_tolerance_property_->setMin( 0 );
+                                                
+  angle_tolerance_property_ = new FloatProperty( "Angle Tolerance", .1,
+                                                 "Angular distance from the last arrow dropped, "
+                                                 "that will cause a new arrow to drop.",
+                                                 this );
+  angle_tolerance_property_->setMin( 0 );
+
+  scale_property_ = new FloatProperty( "Scale", 1.0,
+                                        "Scale of each arrow.",
+                                        this, SLOT( updateScale() ));
+
+  keep_property_ = new IntProperty( "Keep", 100,
+                                    "Number of arrows to keep before removing the oldest.  0 means keep all of them.",
+                                    this );
+  keep_property_->setMin( 0 );
 }
 
 Vector3Display::~Vector3Display()
 {
   unsubscribe();
   clear();
-  for( size_t i = 0; i < visuals_.size(); i++ )
-  {
-    delete visuals_[ i ];
-  }
-
   delete tf_filter_;
+}
+
+void Vector3Display::onInitialize()
+{
+  tf_filter_ = new tf::MessageFilter<geometry_msgs::Vector3Stamped>( *context_->getTFClient(), fixed_frame_.toStdString(),
+                                                          5, update_nh_ );
+
+  tf_filter_->connectInput( sub_ );
+  tf_filter_->registerCallback( boost::bind( &Vector3Display::incomingMessage, this, _1 ));
+  context_->getFrameManager()->registerFilterForTransformStatusCheck( tf_filter_, this );
+
+  origin_frame_property_->setFrameManager(context_->getFrameManager());
 }
 
 // Clear the visuals by deleting their objects.
 void Vector3Display::clear()
 {
-  for( size_t i = 0; i < visuals_.size(); i++ )
+  D_Arrow::iterator it = arrows_.begin();
+  D_Arrow::iterator end = arrows_.end();
+  for ( ; it != end; ++it )
   {
-    delete visuals_[ i ];
-    visuals_[ i ] = NULL;
+    delete *it;
   }
+  arrows_.clear();
+
+  last_position_.reset();
+  last_orientation_.reset();
+
   tf_filter_->clear();
+
   messages_received_ = 0;
-  setStatus( rviz::status_levels::Warn, "Topic", "No messages received" );
+  setStatus( StatusProperty::Warn, "Topic", "No messages received" );
 }
 
-void Vector3Display::setTopic( const std::string& topic )
+void Vector3Display::updateTopic()
 {
   unsubscribe();
   clear();
-  topic_ = topic;
   subscribe();
-
-  // Broadcast the fact that the variable has changed.
-  propertyChanged( topic_property_ );
-
-  // Make sure rviz renders the next time it gets a chance.
-  causeRender();
+  context_->queueRender();
 }
 
-void Vector3Display::setColor( const rviz::Color& color )
+void Vector3Display::updateColor()
 {
-  color_ = color;
+  QColor color = color_property_->getColor();
+  float red   = color.redF();
+  float green = color.greenF();
+  float blue  = color.blueF();
 
-  propertyChanged( color_property_ );
-  updateColorAndAlpha();
-  causeRender();
-}
-
-void Vector3Display::setAlpha( float alpha )
-{
-  alpha_ = alpha;
-
-  propertyChanged( alpha_property_ );
-  updateColorAndAlpha();
-  causeRender();
-}
-
-void Vector3Display::setFrameOfOrigin( const std::string &frame_of_origin )
-{
-  frame_of_origin_ = frame_of_origin;
-
-  propertyChanged( frame_of_origin_property_ );
-  causeRender();
-}
-
-void Vector3Display::setScale( float scale )
-{
-  scale_ = scale;
-
-  propertyChanged( scale_property_ );
-  causeRender();
-}
-
-// Set the current color and alpha values for each visual.
-void Vector3Display::updateColorAndAlpha()
-{
-  for( size_t i = 0; i < visuals_.size(); i++ )
+  D_Arrow::iterator it = arrows_.begin();
+  D_Arrow::iterator end = arrows_.end();
+  for( ; it != end; ++it )
   {
-    if( visuals_[ i ] )
-    {
-      visuals_[ i ]->setColor( color_.r_, color_.g_, color_.b_, alpha_ );
-    }
+    Arrow* arrow = *it;
+    arrow->setColor( red, green, blue, 1.0f );
   }
+  context_->queueRender();
 }
 
-// Set the number of past visuals to show.
-void Vector3Display::setHistoryLength( int length )
+void Vector3Display::updateScale()
 {
-  // Don't let people enter invalid values.
-  if( length < 1 )
-  {
-    length = 1;
-  }
-  // If the length is not changing, we don't need to do anything.
-  if( history_length_ == length )
-  {
-    return;
-  }
 
-  // Set the actual variable.
-  history_length_ = length;
-  propertyChanged( history_length_property_ );
-  
-  // Create a new array of visual pointers, all NULL.
-  std::vector<Vector3Visual*> new_visuals( history_length_, (Vector3Visual*)0 );
+}
 
-  // Copy the contents from the old array to the new.
-  // (Number to copy is the minimum of the 2 vector lengths).
-  size_t copy_len =
-    (new_visuals.size() > visuals_.size()) ?
-    visuals_.size() : new_visuals.size();
-  for( size_t i = 0; i < copy_len; i++ )
-  {
-    int new_index = (messages_received_ - i) % new_visuals.size();
-    int old_index = (messages_received_ - i) % visuals_.size();
-    new_visuals[ new_index ] = visuals_[ old_index ];
-    visuals_[ old_index ] = NULL;
-  }
+void Vector3Display::updateOriginFrame()
+{
 
-  // Delete any remaining old visuals
-  for( size_t i = 0; i < visuals_.size(); i++ ) {
-    delete visuals_[ i ];
-  }
-
-  // We don't need to create any new visuals here, they are created as
-  // needed when messages are received.
-
-  // Put the new vector into the member variable version and let the
-  // old one go out of scope.
-  visuals_.swap( new_visuals );
 }
 
 void Vector3Display::subscribe()
 {
-  // If we are not actually enabled, don't do it.
   if ( !isEnabled() )
   {
     return;
   }
 
-  // Try to subscribe to the current topic name (in ``topic_``).  Make
-  // sure to catch exceptions and set the status to a descriptive
-  // error message.
   try
   {
-    sub_.subscribe( update_nh_, topic_, 10 );
-    setStatus( rviz::status_levels::Ok, "Topic", "OK" );
+    sub_.subscribe( update_nh_, topic_property_->getTopicStd(), 5 );
+    setStatus( StatusProperty::Ok, "Topic", "OK" );
   }
   catch( ros::Exception& e )
   {
-    setStatus( rviz::status_levels::Error, "Topic",
-               std::string( "Error subscribing: " ) + e.what() );
+    setStatus( StatusProperty::Error, "Topic", QString( "Error subscribing: " ) + e.what() );
   }
 }
 
@@ -255,141 +196,101 @@ void Vector3Display::onDisable()
   clear();
 }
 
-// When the "Fixed Frame" changes, we need to update our
-// tf::MessageFilter and erase existing visuals.
-void Vector3Display::fixedFrameChanged()
-{
-  tf_filter_->setTargetFrame( fixed_frame_ );
-  clear();
-}
-
 // This is our callback to handle an incoming message.
-void Vector3Display::incomingMessage( const geometry_msgs::Vector3Stamped::ConstPtr& msg )
+void Vector3Display::incomingMessage( const geometry_msgs::Vector3Stamped::ConstPtr& message )
 {
   ++messages_received_;
-  
-  // Each display can have multiple status lines.  This one is called
-  // "Topic" and says how many messages have been received in this case.
-  std::stringstream ss;
-  ss << messages_received_ << " messages received";
-  setStatus( rviz::status_levels::Ok, "Topic", ss.str() );
+
+  if( !validateFloats( message->vector ))
+  {
+    setStatus( StatusProperty::Error, "Topic", "Message contained invalid floating point values (nans or infs)" );
+    return;
+  }
+
+  setStatus( StatusProperty::Ok, "Topic", QString::number( messages_received_ ) + " messages received" );
 
   // Here we call the rviz::FrameManager to get the transform from the
   // fixed frame to the frame in the header of this Vector3 message.  If
   // it fails, we can't do anything else so we return.
   Ogre::Quaternion orientation, fake_orientation;
   Ogre::Vector3 position, fake_position;
-  if( !vis_manager_->getFrameManager()->getTransform( frame_of_origin_,
-                                                      msg->header.stamp,
-                                                      position, fake_orientation ))
+  if( !context_->getFrameManager()->getTransform( origin_frame_property_->getStdString(),
+                                                  message->header.stamp,
+                                                  position, fake_orientation ))
   {
     ROS_DEBUG( "Error transforming from frame '%s' to frame '%s'",
-               frame_of_origin_.c_str(), fixed_frame_.c_str() );
+               qPrintable( origin_frame_property_->getString() ), qPrintable( fixed_frame_ ) );
     return;
   }
 
-  if( !vis_manager_->getFrameManager()->getTransform( msg->header.frame_id,
-                                                      msg->header.stamp,
-                                                      fake_position, orientation ))
+  if( !context_->getFrameManager()->getTransform( message->header.frame_id,
+                                                  message->header.stamp,
+                                                  fake_position, orientation ))
   {
     ROS_DEBUG( "Error transforming from frame '%s' to frame '%s'",
-               msg->header.frame_id.c_str(), fixed_frame_.c_str() );
+               message->header.frame_id.c_str(), qPrintable( fixed_frame_ ) );
     return;
   }
 
-  // We are keeping a circular buffer of visual pointers.  This gets
-  // the next one, or creates and stores it if it was missing.
-  Vector3Visual* visual = visuals_[ messages_received_ % history_length_ ];
-  if( visual == NULL )
+  Ogre::Vector3 vector( message->vector.x, message->vector.y, -message->vector.z );
+  orientation = orientation * vector.getRotationTo(Ogre::Vector3::UNIT_Z);
+
+  if( last_position_ && last_orientation_ )
   {
-    visual = new Vector3Visual( vis_manager_->getSceneManager(), scene_node_ );
-    visuals_[ messages_received_ % history_length_ ] = visual;
+    if( (*last_position_ - position).length() < position_tolerance_property_->getFloat() &&
+        (*last_orientation_ - orientation).normalise() < angle_tolerance_property_->getFloat() )
+    {
+      return;
+    }
   }
 
-  // Now set or update the contents of the chosen visual.
-  visual->setMessage( msg );
-  visual->setFramePosition( position );
-  visual->setFrameOrientation( orientation );
-  visual->setColor( color_.r_, color_.g_, color_.b_, alpha_ );
-  visual->setScale( scale_ );
+  float length = vector.length();
+  Arrow* arrow = new Arrow( scene_manager_, scene_node_, std::max(length - 0.2f, 0.0f), 0.05f, 0.2f, 0.2f );
+
+  arrow->setPosition(position);
+  arrow->setOrientation(orientation);
+
+  QColor color = color_property_->getColor();
+  arrow->setColor( color.redF(), color.greenF(), color.blueF(), 1.0f );
+
+  Ogre::Vector3 scale(scale_property_->getFloat());
+  arrow->setScale( scale );
+
+  arrows_.push_back( arrow );
+
+  if (!last_position_)    last_position_.reset(new Ogre::Vector3());
+  if (!last_orientation_) last_orientation_.reset(new Ogre::Quaternion());
+  *last_position_    = position;
+  *last_orientation_ = orientation;
+  context_->queueRender();
 }
 
-// Override rviz::Display's reset() function to add a call to clear().
+void Vector3Display::fixedFrameChanged()
+{
+  tf_filter_->setTargetFrame( fixed_frame_.toStdString() );
+  clear();
+}
+
+void Vector3Display::update( float wall_dt, float ros_dt )
+{
+  size_t keep = keep_property_->getInt();
+  if( keep > 0 )
+  {
+    while( arrows_.size() > keep )
+    {
+      delete arrows_.front();
+      arrows_.pop_front();
+    }
+  }
+}
+
 void Vector3Display::reset()
 {
   Display::reset();
   clear();
 }
 
-// Override createProperties() to build and configure a Property
-// object for each user-editable property.  ``property_manager_``,
-// ``property_prefix_``, and ``parent_category_`` are all initialized before
-// this is called.
-void Vector3Display::createProperties()
-{
-  topic_property_ =
-    property_manager_->createProperty<rviz::ROSTopicStringProperty>( "Topic",
-                                                                     property_prefix_,
-                                                                     boost::bind( &Vector3Display::getTopic, this ),
-                                                                     boost::bind( &Vector3Display::setTopic, this, _1 ),
-                                                                     parent_category_,
-                                                                     this );
-  setPropertyHelpText( topic_property_, "geometry_msgs::Vector3Stamped topic to subscribe to." );
-  rviz::ROSTopicStringPropertyPtr topic_prop = topic_property_.lock();
-  topic_prop->setMessageType( ros::message_traits::datatype<geometry_msgs::Vector3Stamped>() );
+} // namespace hector_rviz_plugins
 
-  frame_of_origin_property_ =
-      property_manager_->createProperty<rviz::TFFrameProperty>( "Origin Frame",
-                                                                property_prefix_,
-                                                                boost::bind( &Vector3Display::getFrameOfOrigin, this ),
-                                                                boost::bind( &Vector3Display::setFrameOfOrigin, this, _1),
-                                                                parent_category_,
-                                                                this );
-  setPropertyHelpText( frame_of_origin_property_, "Frame that serves as a origin for the drawn vector." );
-  rviz::TFFramePropertyPtr frame_of_origin_prop = frame_of_origin_property_.lock();
-  frame_of_origin_prop->set("base_link");
-
-  color_property_ =
-    property_manager_->createProperty<rviz::ColorProperty>( "Color",
-                                                            property_prefix_,
-                                                            boost::bind( &Vector3Display::getColor, this ),
-                                                            boost::bind( &Vector3Display::setColor, this, _1 ),
-                                                            parent_category_,
-                                                            this );
-  setPropertyHelpText( color_property_, "Color to draw the acceleration arrows." );
-
-  alpha_property_ =
-    property_manager_->createProperty<rviz::FloatProperty>( "Alpha",
-                                                            property_prefix_,
-                                                            boost::bind( &Vector3Display::getAlpha, this ),
-                                                            boost::bind( &Vector3Display::setAlpha, this, _1 ),
-                                                            parent_category_,
-                                                            this );
-  setPropertyHelpText( alpha_property_, "0 is fully transparent, 1.0 is fully opaque." );
-
-  scale_property_ =
-    property_manager_->createProperty<rviz::FloatProperty>( "Scale",
-                                                            property_prefix_,
-                                                            boost::bind( &Vector3Display::getScale, this ),
-                                                            boost::bind( &Vector3Display::setScale, this, _1 ),
-                                                            parent_category_,
-                                                            this );
-  setPropertyHelpText( scale_property_, "Scale of the shaft length." );
-
-  history_length_property_ =
-    property_manager_->createProperty<rviz::IntProperty>( "History Length",
-                                                          property_prefix_,
-                                                          boost::bind( &Vector3Display::getHistoryLength, this ),
-                                                          boost::bind( &Vector3Display::setHistoryLength, this, _1 ),
-                                                          parent_category_,
-                                                          this );
-  setPropertyHelpText( history_length_property_, "Number of prior measurements to display." );
-}
-
-} // end namespace hector_rviz_plugins
-
-// Tell pluginlib about this class.  It is important to do this in
-// global scope, outside our package's namespace.
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS( hector_rviz_plugins, Vector3, hector_rviz_plugins::Vector3Display, rviz::Display )
-// END_TUTORIAL
+PLUGINLIB_EXPORT_CLASS( hector_rviz_plugins::Vector3Display, rviz::Display )
