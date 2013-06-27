@@ -1,17 +1,13 @@
 <package>
-  <name>rqt_image_enhancer</name>
+  <name>hector_rqt_plugins</name>
   <version>0.2.16</version>
   <description>rqt_image_enhancer provides a GUI plugin for displaying images using image_transport.</description>
-  <maintainer email="ablasdel@willowgarage.com">Aaron Blasdel</maintainer>
-  <maintainer email="isao.saito@mavs.uta.edu">Isaac Saito</maintainer>
+  <maintainer email="graber@fsr.tu-darmstadt.de">Thorsten Graber</maintainer>
 
   <license>BSD</license>
 
-  <url type="website">http://ros.org/wiki/rqt_image_enhancer</url>
-  <url type="repository">https://github.com/ros-visualization/rqt_common_plugins</url>
-  <url type="bugtracker">https://github.com/ros-visualization/rqt_common_plugins/issues</url>
-
   <author>Dirk Thomas</author>
+  <author>Thorsten Graber	</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 

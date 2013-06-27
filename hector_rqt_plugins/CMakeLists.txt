@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 
-project(rqt_image_enhancer)
+project(hector_rqt_plugins)
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge)
 
@@ -22,13 +22,13 @@ set(rqt_image_enhancer_UIS
   src/rqt_image_enhancer/image_enhancer.ui
 )
 
-set(rqt_image_enhancer_INCLUDE_DIRECTORIES
+set(hector_rqt_plugins_INCLUDE_DIRECTORIES
   include
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 catkin_package(
-	INCLUDE_DIRS ${rqt_image_enhancer_INCLUDE_DIRECTORIES}
+	INCLUDE_DIRS ${hector_rqt_plugins_INCLUDE_DIRECTORIES}
 	LIBRARIES ${PROJECT_NAME} 
 	CATKIN_DEPENDS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge
 )
@@ -37,7 +37,7 @@ catkin_python_setup()
 qt4_wrap_cpp(rqt_image_enhancer_MOCS ${rqt_image_enhancer_HDRS})
 qt4_wrap_ui(rqt_image_enhancer_UIS_H ${rqt_image_enhancer_UIS})
 
-include_directories(${rqt_image_enhancer_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS})
+include_directories(${hector_rqt_plugins_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} ${rqt_image_enhancer_SRCS} ${rqt_image_enhancer_MOCS} ${rqt_image_enhancer_UIS_H})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
 
