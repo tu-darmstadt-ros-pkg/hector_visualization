@@ -91,9 +91,17 @@ protected slots:
 
   virtual void onDynamicRange(bool checked);
 
+  virtual void onSelectionInProgress(QPoint p1, QPoint p2);
+
+  virtual void onSelectionFinished(QPoint p1, QPoint p2);
+
+  virtual void onRemoveSelection();
+
 protected:
 
   virtual void callbackImage(const sensor_msgs::Image::ConstPtr& msg);
+
+  virtual void enforceSelectionConstraints(QPoint & p);
 
   Ui::ImageEnhancerWidget ui_;
 
@@ -105,6 +113,12 @@ protected:
   QMutex qimage_mutex_;
 
   cv::Mat conversion_mat_;
+
+  QRect selection_;
+  QPoint selection_top_left_;
+  QSize selection_size_;
+
+  bool selected_;
 
 };
 

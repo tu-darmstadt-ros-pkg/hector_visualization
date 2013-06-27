@@ -113,4 +113,36 @@ int RatioLayoutedFrame::greatestCommonDivisor(int a, int b)
   return greatestCommonDivisor(b, a % b);
 }
 
+void RatioLayoutedFrame::mousePressEvent(QMouseEvent *me)
+{
+    if(me->button() == Qt::LeftButton)
+    {
+        mouse_pressed_ = true;
+        select_start_ = me->pos();
+    }
+}
+
+void RatioLayoutedFrame::mouseMoveEvent(QMouseEvent *me)
+{
+    if(mouse_pressed_)
+    {
+        select_end_ = me->pos();
+        emit selectionInProgress(select_start_, select_end_);
+    }
+}
+
+void RatioLayoutedFrame::mouseReleaseEvent(QMouseEvent *me)
+{
+    if(me->button() == Qt::LeftButton)
+    {
+        select_end_ = me->pos();
+        emit selectionFinished(select_start_, select_end_);
+        mouse_pressed_ = false;
+    }
+    else if(me->button() == Qt::RightButton)
+    {
+        emit rightMouseButtonClicked();
+    }
+}
+
 }

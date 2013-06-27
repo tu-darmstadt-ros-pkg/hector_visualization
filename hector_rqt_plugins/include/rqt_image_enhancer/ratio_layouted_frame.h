@@ -39,6 +39,7 @@
 #include <QPainter>
 #include <QRect>
 #include <QSize>
+#include <QMouseEvent>
 
 namespace rqt_image_enhancer {
 
@@ -70,11 +71,26 @@ public:
 
   void setAspectRatio(unsigned short width, unsigned short height);
 
+  void mousePressEvent(QMouseEvent * me);
+
+  void mouseMoveEvent(QMouseEvent * me);
+
+  void mouseReleaseEvent(QMouseEvent * me);
+
 private:
 
   static int greatestCommonDivisor(int a, int b);
 
   QSize aspect_ratio_;
+
+  bool mouse_pressed_;
+
+  QPoint select_start_, select_end_;
+
+signals:
+  void selectionInProgress(QPoint p1, QPoint p2);
+  void selectionFinished(QPoint p1, QPoint p2);
+  void rightMouseButtonClicked();
 
 };
 

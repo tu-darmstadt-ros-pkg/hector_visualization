@@ -34,6 +34,7 @@
 
 #include <pluginlib/class_list_macros.h>
 #include <ros/master.h>
+#include <ros/console.h>
 #include <sensor_msgs/image_encodings.h>
 
 #include <cv_bridge/cv_bridge.h>
@@ -42,11 +43,14 @@
 #include <QMessageBox>
 #include <QPainter>
 
+#include <algorithm>
+
 namespace rqt_image_enhancer {
 
 ImageEnhancer::ImageEnhancer()
   : rqt_gui_cpp::Plugin()
   , widget_(0)
+  , selected_(false)
 {
   setObjectName("ImageEnhancer");
 }
@@ -70,11 +74,12 @@ void ImageEnhancer::initPlugin(qt_gui_cpp::PluginContext& context)
 
   ui_.refresh_topics_push_button->setIcon(QIcon::fromTheme("view-refresh"));
   connect(ui_.refresh_topics_push_button, SIGNAL(pressed()), this, SLOT(updateTopicList()));
-
-  ui_.zoom_1_push_button->setIcon(QIcon::fromTheme("zoom-original"));
-  connect(ui_.zoom_1_push_button, SIGNAL(toggled(bool)), this, SLOT(onZoom1(bool)));
   
   connect(ui_.dynamic_range_check_box, SIGNAL(toggled(bool)), this, SLOT(onDynamicRange(bool)));
+
+  connect(ui_.image_frame, SIGNAL(rightMouseButtonClicked()), this, SLOT(onRemoveSelection()));
+  connect(ui_.image_frame, SIGNAL(selectionInProgress(QPoint,QPoint)), this, SLOT(onSelectionInProgress(QPoint,QPoint)));
+  connect(ui_.image_frame, SIGNAL(selectionFinished(QPoint,QPoint)), this, SLOT(onSelectionFinished(QPoint,QPoint)));
 }
 
 bool ImageEnhancer::eventFilter(QObject* watched, QEvent* event)
@@ -99,6 +104,16 @@ bool ImageEnhancer::eventFilter(QObject* watched, QEvent* event)
       painter.setBrush(gradient);
       painter.drawRect(0, 0, ui_.image_frame->frameRect().width() + 1, ui_.image_frame->frameRect().height() + 1);
     }
+
+    if(selected_)
+    {
+        QRect rect(selection_top_left_, selection_size_);
+        painter.setPen(Qt::red);
+        painter.drawRect(rect);
+    }
+
+    ui_.image_frame->update();
+
     return false;
   }
 
@@ -115,16 +130,12 @@ void ImageEnhancer::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_c
   QString topic = ui_.topics_combo_box->currentText();
   //qDebug("ImageEnhancer::saveSettings() topic '%s'", topic.toStdString().c_str());
   instance_settings.setValue("topic", topic);
-  instance_settings.setValue("zoom1", ui_.zoom_1_push_button->isChecked());
   instance_settings.setValue("dynamic_range", ui_.dynamic_range_check_box->isChecked());
   instance_settings.setValue("max_range", ui_.max_range_double_spin_box->value());
 }
 
 void ImageEnhancer::restoreSettings(const qt_gui_cpp::Settings& plugin_settings, const qt_gui_cpp::Settings& instance_settings)
 {
-  bool zoom1_checked = instance_settings.value("zoom1", false).toBool();
-  ui_.zoom_1_push_button->setChecked(zoom1_checked);
-
   bool dynamic_range_checked = instance_settings.value("dynamic_range", false).toBool();
   ui_.dynamic_range_check_box->setChecked(dynamic_range_checked);
 
@@ -269,6 +280,53 @@ void ImageEnhancer::onZoom1(bool checked)
   }
 }
 
+void ImageEnhancer::onSelectionInProgress(QPoint p1, QPoint p2)
+{
+    enforceSelectionConstraints(p1);
+    enforceSelectionConstraints(p2);
+
+    int tl_x = std::min(p1.x(), p2.x());
+    int tl_y = std::min(p1.y(), p2.y());
+
+    selection_top_left_ = QPoint(tl_x,tl_y);
+    selection_size_ = QSize(abs(p1.x() - p2.x()), abs(p1.y() - p2.y()));
+
+    //ROS_DEBUG_STREAM << "p1: " << p1.x() << " " << p1.y() << " p2: " << p2.x() << " " << p2.y();
+
+    selected_ = true;
+}
+
+void ImageEnhancer::onSelectionFinished(QPoint p1, QPoint p2)
+{
+    enforceSelectionConstraints(p1);
+    enforceSelectionConstraints(p2);
+
+    int tl_x = p1.x() < p2.x() ? p1.x() : p2.x();
+    int tl_y = p1.y() < p2.y() ? p1.y() : p2.y();
+
+    selection_top_left_ = QPoint(tl_x,tl_y);
+    selection_size_ = QSize(abs(p1.x() - p2.x()), abs(p1.y() - p2.y()));
+
+
+}
+
+void ImageEnhancer::onRemoveSelection()
+{
+    selected_ = false;
+}
+
+void ImageEnhancer::enforceSelectionConstraints(QPoint & p)
+{
+    int min_x = 0;
+    int max_x = ui_.image_frame->width();
+
+    int min_y = 0;
+    int max_y = ui_.image_frame->height();
+
+    p.setX(std::min(std::max(p.x(),min_x),max_x));
+    p.setY(std::min(std::max(p.y(),min_y),max_y));
+}
+
 void ImageEnhancer::onDynamicRange(bool checked)
 {
   ui_.max_range_double_spin_box->setEnabled(!checked);
@@ -276,61 +334,64 @@ void ImageEnhancer::onDynamicRange(bool checked)
 
 void ImageEnhancer::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
 {
-  try
-  {
-    // First let cv_bridge do its magic
-    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
-    conversion_mat_ = cv_ptr->image;
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    // If we're here, there is no conversion that makes sense, but let's try to imagine a few first
-    cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg);
-    if (msg->encoding == "CV_8UC3")
+    if(!selected_)
     {
-      // assuming it is rgb
-      conversion_mat_ = cv_ptr->image;
-    } else if (msg->encoding == "8UC1") {
-      // convert gray to rgb
-      cv::cvtColor(cv_ptr->image, conversion_mat_, CV_GRAY2RGB);
-    } else if (msg->encoding == "16UC1" || msg->encoding == "32FC1") {
-      // scale / quantify
-      double min = 0;
-      double max = ui_.max_range_double_spin_box->value();
-      if (msg->encoding == "16UC1") max *= 1000;
-      if (ui_.dynamic_range_check_box->isChecked())
-      {
-        // dynamically adjust range based on min/max in image
-        cv::minMaxLoc(cv_ptr->image, &min, &max);
-        if (min == max) {
-          // completely homogeneous images are displayed in gray
-          min = 0;
-          max = 2;
+        try
+        {
+            // First let cv_bridge do its magic
+            cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
+            conversion_mat_ = cv_ptr->image;
         }
-      }
-      cv::Mat img_scaled_8u;
-      cv::Mat(cv_ptr->image-min).convertTo(img_scaled_8u, CV_8UC1, 255. / (max - min));
-      cv::cvtColor(img_scaled_8u, conversion_mat_, CV_GRAY2RGB);
-    } else {
-      qWarning("ImageEnhancer.callback_image() could not convert image from '%s' to 'rgb8' (%s)", msg->encoding.c_str(), e.what());
-      qimage_ = QImage();
-      return;
+        catch (cv_bridge::Exception& e)
+        {
+            // If we're here, there is no conversion that makes sense, but let's try to imagine a few first
+            cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(msg);
+            if (msg->encoding == "CV_8UC3")
+            {
+                // assuming it is rgb
+                conversion_mat_ = cv_ptr->image;
+            } else if (msg->encoding == "8UC1") {
+                // convert gray to rgb
+                cv::cvtColor(cv_ptr->image, conversion_mat_, CV_GRAY2RGB);
+            } else if (msg->encoding == "16UC1" || msg->encoding == "32FC1") {
+                // scale / quantify
+                double min = 0;
+                double max = ui_.max_range_double_spin_box->value();
+                if (msg->encoding == "16UC1") max *= 1000;
+                if (ui_.dynamic_range_check_box->isChecked())
+                {
+                    // dynamically adjust range based on min/max in image
+                    cv::minMaxLoc(cv_ptr->image, &min, &max);
+                    if (min == max) {
+                        // completely homogeneous images are displayed in gray
+                        min = 0;
+                        max = 2;
+                    }
+                }
+                cv::Mat img_scaled_8u;
+                cv::Mat(cv_ptr->image-min).convertTo(img_scaled_8u, CV_8UC1, 255. / (max - min));
+                cv::cvtColor(img_scaled_8u, conversion_mat_, CV_GRAY2RGB);
+            } else {
+                qWarning("ImageEnhancer.callback_image() could not convert image from '%s' to 'rgb8' (%s)", msg->encoding.c_str(), e.what());
+                qimage_ = QImage();
+                return;
+            }
+        }
+
+        // copy temporary image as it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
+        QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, QImage::Format_RGB888);
+        qimage_mutex_.lock();
+        qimage_ = image.copy();
+        qimage_mutex_.unlock();
+
+        ui_.image_frame->setAspectRatio(qimage_.width(), qimage_.height());
+        //onZoom1(false);
+
+        ui_.image_frame->setInnerFrameMinimumSize(QSize(80, 60));
+        ui_.image_frame->setMaximumSize(QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
+        widget_->setMinimumSize(QSize(80, 60));
+        widget_->setMaximumSize(QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
     }
-  }
-
-  // copy temporary image as it uses the conversion_mat_ for storage which is asynchronously overwritten in the next callback invocation
-  QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, QImage::Format_RGB888);
-  qimage_mutex_.lock();
-  qimage_ = image.copy();
-  qimage_mutex_.unlock();
-
-  ui_.image_frame->setAspectRatio(qimage_.width(), qimage_.height());
-  if (!ui_.zoom_1_push_button->isEnabled())
-  {
-    ui_.zoom_1_push_button->setEnabled(true);
-    onZoom1(ui_.zoom_1_push_button->isChecked());
-  }
-  ui_.image_frame->update();
 }
 
 }

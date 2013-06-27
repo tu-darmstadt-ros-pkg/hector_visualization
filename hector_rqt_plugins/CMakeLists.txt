@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(hector_rqt_plugins)
 # Load catkin and all dependencies required for this package
-find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge)
+find_package(catkin REQUIRED COMPONENTS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge rosconsole)
 
 find_package(Qt4 COMPONENTS QtCore QtGui REQUIRED)
 
@@ -30,7 +30,7 @@ set(hector_rqt_plugins_INCLUDE_DIRECTORIES
 catkin_package(
 	INCLUDE_DIRS ${hector_rqt_plugins_INCLUDE_DIRECTORIES}
 	LIBRARIES ${PROJECT_NAME} 
-	CATKIN_DEPENDS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge
+	CATKIN_DEPENDS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge rosconsole
 )
 catkin_python_setup()
 
