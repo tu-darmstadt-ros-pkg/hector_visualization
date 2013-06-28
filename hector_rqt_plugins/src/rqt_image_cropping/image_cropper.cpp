@@ -73,7 +73,9 @@ void ImageCropper::initPlugin(qt_gui_cpp::PluginContext& context)
   ui_.topics_combo_box->setCurrentIndex(ui_.topics_combo_box->findText(""));
   connect(ui_.topics_combo_box, SIGNAL(currentIndexChanged(int)), this, SLOT(onInTopicChanged(int)));
 
+  ui_.out_topic_line_edit->setText("/cropped");
   connect(ui_.out_topic_line_edit, SIGNAL(editingFinished()), this, SLOT(onOutTopicChanged()));
+  onOutTopicChanged();
 
   ui_.refresh_topics_push_button->setIcon(QIcon::fromTheme("view-refresh"));
   connect(ui_.refresh_topics_push_button, SIGNAL(pressed()), this, SLOT(updateTopicList()));
@@ -112,11 +114,6 @@ bool ImageCropper::eventFilter(QObject* watched, QEvent* event)
     {
         selection_ = QRectF(selection_top_left_rect_, selection_size_rect_);
 
-        if(!selected_region_.isNull())
-        {
-            painter.drawImage(selection_, selected_region_);
-        }
-
         painter.setPen(Qt::red);
         painter.drawRect(selection_);
     }
@@ -132,6 +129,7 @@ bool ImageCropper::eventFilter(QObject* watched, QEvent* event)
 void ImageCropper::shutdownPlugin()
 {
   subscriber_.shutdown();
+  publisher_.shutdown();
 }
 
 void ImageCropper::saveSettings(qt_gui_cpp::Settings& plugin_settings, qt_gui_cpp::Settings& instance_settings) const
@@ -267,6 +265,8 @@ void ImageCropper::onInTopicChanged(int index)
       QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
     }
   }
+
+  selected_ = false;
 }
 
 void ImageCropper::onOutTopicChanged()
@@ -285,6 +285,8 @@ void ImageCropper::onOutTopicChanged()
             QMessageBox::warning(widget_, tr("Loading image transport plugin failed"), e.what());
         }
     }
+
+    selected_ = false;
 }
 
 void ImageCropper::onSelectionInProgress(QPoint p1, QPoint p2)
@@ -326,10 +328,10 @@ void ImageCropper::onSelectionFinished(QPoint p1, QPoint p2)
 //    std::cout << "sle height: " << selection_size_.height() << " width: " << selection_size_.width() << std::endl;
 //    std::cout << "roi rows: " << roi.rows << " cols: " << roi.cols << std::endl;
 
-    cv_bridge::CvImage crop;
-    crop.header = sens_msg_image_->header;
-    crop.encoding = sensor_msgs::image_encodings::RGB8;
-    crop.image = roi;
+//    cv_bridge::CvImage crop;
+//    crop.header = sens_msg_image_->header;
+//    crop.encoding = sensor_msgs::image_encodings::RGB8;
+//    crop.image = roi;
 
     // adapt camera info
     // Create updated CameraInfo message
@@ -346,7 +348,7 @@ void ImageCropper::onSelectionFinished(QPoint p1, QPoint p2)
 
     if(publisher_.getNumSubscribers())
     {
-        publisher_.publish(crop.toImageMsg(),out_info);
+        publisher_.publish(sens_msg_image_,out_info);
     }
 }
 
@@ -358,11 +360,11 @@ void ImageCropper::onRemoveSelection()
 
 void ImageCropper::enforceSelectionConstraints(QPoint & p)
 {
-    int min_x = 0;
-    int max_x = ui_.image_frame->width();
+    int min_x = 1;
+    int max_x = ui_.image_frame->width() - 2 * ui_.image_frame->frameWidth();
 
-    int min_y = 0;
-    int max_y = ui_.image_frame->height();
+    int min_y = 1;
+    int max_y = ui_.image_frame->height() - 2 * ui_.image_frame->frameWidth();
 
     p.setX(std::min(std::max(p.x(),min_x),max_x));
     p.setY(std::min(std::max(p.y(),min_y),max_y));

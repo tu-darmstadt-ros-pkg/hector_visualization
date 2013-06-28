@@ -84,7 +84,6 @@ bool ImageView::eventFilter(QObject* watched, QEvent* event)
     QPainter painter(ui_.image_frame);
     if (!qimage_.isNull())
     {
-      ui_.image_frame->resizeToFitAspectRatio();
       // TODO: check if full draw is really necessary
       //QPaintEvent* paint_event = dynamic_cast<QPaintEvent*>(event);
       //painter.drawImage(paint_event->rect(), qimage_);
@@ -257,13 +256,10 @@ void ImageView::onZoom1(bool checked)
     {
       return;
     }
-    ui_.image_frame->setInnerFrameFixedSize(qimage_.size());
     widget_->resize(ui_.image_frame->size());
     widget_->setMinimumSize(widget_->sizeHint());
     widget_->setMaximumSize(widget_->sizeHint());
   } else {
-    ui_.image_frame->setInnerFrameMinimumSize(QSize(80, 60));
-    ui_.image_frame->setMaximumSize(QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
     widget_->setMinimumSize(QSize(80, 60));
     widget_->setMaximumSize(QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX));
   }
@@ -324,7 +320,6 @@ void ImageView::callbackImage(const sensor_msgs::Image::ConstPtr& msg)
   qimage_ = image.copy();
   qimage_mutex_.unlock();
 
-  ui_.image_frame->setAspectRatio(qimage_.width(), qimage_.height());
   if (!ui_.zoom_1_push_button->isEnabled())
   {
     ui_.zoom_1_push_button->setEnabled(true);
