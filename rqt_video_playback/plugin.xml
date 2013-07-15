@@ -1,0 +1,12 @@
+<library path="lib/librqt_video_playback">
+  <class name="rqt_video_playback/VideoPlayback" type="rqt_video_playback::VideoPlayback" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      A GUI plugin to playback recorded video files synchronized with log data based on the /clock topic.
+    </description>
+    <qtgui>
+      <label>Video Playback</label>
+      <icon type="theme">image-x-generic</icon>
+      <statustip>A GUI plugin to playback recorded video files synchronized with log data.</statustip>
+    </qtgui>
+  </class>
+</library>
