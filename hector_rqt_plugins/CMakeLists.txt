@@ -42,7 +42,7 @@ set(hector_rqt_plugins_INCLUDE_DIRECTORIES
 )
 
 catkin_package(
-	INCLUDE_DIRS ${hector_rqt_plugins_INCLUDE_DIRECTORIES}
+	INCLUDE_DIRS include
 	LIBRARIES ${PROJECT_NAME} 
 	CATKIN_DEPENDS rqt_gui rqt_gui_cpp image_transport sensor_msgs cv_bridge rosconsole
 )
