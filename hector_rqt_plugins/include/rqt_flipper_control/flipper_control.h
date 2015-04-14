@@ -71,14 +71,13 @@ private:
   void setFlipperRearPose(const int pose);
   void updateModel();
 protected slots:
-  virtual void sliderFrontChanged(float value);
-  virtual void sliderRearChanged(float value);
+  virtual void sliderFrontChanged(int value);
+  virtual void sliderRearChanged(int value);
 
 private:
   Ui::FlipperControlWidget ui_;
   QWidget* widget_;
-  ros::Publisher frontPublisher;
-  ros::Publisher rearPublisher;
+  ros::Publisher jointStatePub;
   ros::Subscriber flipperFrontSubs;
   ros::Subscriber flipperRearSubs;
 };

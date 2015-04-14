@@ -111,14 +111,15 @@ void FlipperControl::setFlipperRearPose(const int pose){
 }
 
 
-void FlipperControl::sliderFrontChanged(float value){
+void FlipperControl::sliderFrontChanged(int value){
+    float fvalue = value /1000.0;
     sensor_msgs::JointState msg;
     msg.name.push_back("flipper_front");
-    msg.position.push_back(value);
+    msg.position.push_back(fvalue);
     this->jointStatePub.publish(msg);
 }
 
-void FlipperControl::sliderRearChanged(float value){
+void FlipperControl::sliderRearChanged(int value){
 
 }
 
