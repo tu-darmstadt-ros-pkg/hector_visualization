@@ -36,6 +36,20 @@ set(rqt_image_cropping_UIS
   src/rqt_image_cropping/image_cropper.ui
 )
 
+set(rqt_flipper_control_SRCS
+  src/rqt_flipper_control/flipper_control.cpp
+  src/rqt_flipper_control/ratio_layouted_frame.cpp
+)
+
+set(rqt_flipper_control_HDRS
+  include/rqt_flipper_control/flipper_control.h
+  include/rqt_flipper_control/ratio_layouted_frame.h
+)
+
+set(rqt_flipper_control_UIS
+  src/rqt_flipper_control/flipper_control.ui
+)
+
 set(hector_rqt_plugins_INCLUDE_DIRECTORIES
   include
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -54,10 +68,14 @@ qt4_wrap_ui(rqt_image_view_UIS_H ${rqt_image_view_UIS})
 qt4_wrap_cpp(rqt_image_cropping_MOCS ${rqt_image_cropping_HDRS})
 qt4_wrap_ui(rqt_image_cropping_UIS_H ${rqt_image_cropping_UIS})
 
+qt4_wrap_cpp(rqt_flipper_control_MOCS ${rqt_flipper_control_HDRS})
+qt4_wrap_ui(rqt_flipper_control_UIS_H ${rqt_flipper_control_UIS})
+
 include_directories(${hector_rqt_plugins_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS})
 add_library(${PROJECT_NAME}
 		${rqt_image_view_SRCS} ${rqt_image_view_MOCS} ${rqt_image_view_UIS_H}
-		${rqt_image_cropping_SRCS} ${rqt_image_cropping_MOCS} ${rqt_image_cropping_UIS_H})
+                ${rqt_image_cropping_SRCS} ${rqt_image_cropping_MOCS} ${rqt_image_cropping_UIS_H}
+                ${rqt_flipper_control_SRCS} ${rqt_flipper_control_MOCS} ${rqt_flipper_control_UIS_H})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
 
 find_package(class_loader)

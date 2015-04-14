@@ -19,4 +19,14 @@
       <statustip>A GUI plugin to view a sensor_msgs/Image topic.</statustip>
     </qtgui>
   </class>
+  <class name="rqt_flipper_control/FlipperControl" type="rqt_flipper_control::FlipperControl" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      A GUI plugin to view the flipper position and control them.
+    </description>
+    <qtgui>
+      <label>Flipper Control</label>
+      <icon type="theme">image-x-generic</icon>
+      <statustip>A GUI plugin to view the flipper position and control them.</statustip>
+    </qtgui>
+  </class>
 </library>
