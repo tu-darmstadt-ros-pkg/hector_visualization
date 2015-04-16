@@ -1,0 +1,40 @@
+state_topics: 
+  -  /joint_states
+
+groups:
+  - bertl_flipper_group
+#  - bertl_flipper_group2
+
+up_action:
+  label: "Flipper Up"
+  joint_positions:
+     flipper_front: 0.86
+
+zero_action:
+  label: "Flipper Zero"
+  joint_positions:
+     flipper_front: 0
+
+drive_action:
+  label: "Flipper Drive"
+  joint_positions:
+     flipper_front: 0.19
+
+down_action:
+  label: "Flipper Down"
+  joint_positions:
+     flipper_front: -0.52
+
+bertl_flipper_group:
+  label: "Flipper"
+  controller_name : flipper_traj_controller
+  topic: /jointstate_cmd
+  joints: 
+   - flipper_front
+  actions:
+   - up_action
+   - drive_action
+   - zero_action
+   - down_action
+
+

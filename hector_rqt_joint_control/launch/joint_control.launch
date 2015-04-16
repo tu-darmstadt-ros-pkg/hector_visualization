@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!-- This launch file uses the Gravity Controller library to provide joint control. -->
+
+<launch>
+
+   <rosparam ns="hector_rqt_joint_control" command="load" file="$(find hector_rqt_joint_control)/config/displayed_groups.yaml" />
+
+   <node name="joint_control_ui" pkg="hector_rqt_joint_control" type="joint_control" >
+   	<param name='positions_file' value="$(find hector_rqt_joint_control)/launch/topics.txt"/>
+   </node>
+
+</launch>
+

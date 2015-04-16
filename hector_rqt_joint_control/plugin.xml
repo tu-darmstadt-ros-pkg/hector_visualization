@@ -1,0 +1,12 @@
+<library path="src">
+  <class name="JointControlPlugin" type="hector_rqt_joint_control.joint_control.JointControlDialog" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      A Python GUI plugin to manually adjust joint positions
+    </description>
+    <qtgui>
+      <label>Joint Control UI</label>
+      <icon type="theme">system-search</icon>
+      <statustip>A Python GUI plugin to manually adjust joint positions</statustip>
+    </qtgui>
+  </class>
+</library>
