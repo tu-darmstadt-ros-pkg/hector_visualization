@@ -47,6 +47,7 @@ class Controller(object):
         self.name = name
         self.parent = parent
         self.joints = []
+        self.rememberedJointPositions = {}
         self.duration = 0.25
         self.min_duration = 0.25
         self.max_vel = 0.785  # 45 deg/s
@@ -76,6 +77,18 @@ class Controller(object):
                 	joint.slider.setValue(int(joint_target_position * 10000.0))
 	    
         return process_action
+
+    ##
+    # Remember current joint states for later recall
+    ##
+    def remember(self):
+	print "remember!"    
+
+    ##
+    # Recall last saved joint states
+    ##
+    def recall(self):
+	print "recall"    
 
     ##
     # Publish the JointState as command
@@ -326,13 +339,15 @@ class JointControl(object):
             print controller.name
 
 	    group_actions = rospy.get_param("/hector_rqt_joint_control/" + controller.group_name + "/actions", ())
+	    
+            controller.actionButtons={ }
 
 	    for action in group_actions:
 		action_label = rospy.get_param("/hector_rqt_joint_control/" + action + "/label", action)
 		rospy.logerr("processing action: %s", action)
-		controller.snap_to_ghost_button = QPushButton(action_label)
-            	controller.snap_to_ghost_button.pressed.connect(controller.create_action_callback(action))
-            	vbox.addWidget(controller.snap_to_ghost_button)
+		controller.actionButtons[ action ] = QPushButton(action_label)
+            	controller.actionButtons[ action ].pressed.connect(controller.create_action_callback(action))
+            	vbox.addWidget(controller.actionButtons[action])
 
 	    rospy.logerr("group_actions: %s", group_actions)
 
@@ -366,10 +381,32 @@ class JointControl(object):
                 joint.progress_bar.setValue(int(lower_limit* 10000.0))
                 vbox.addWidget(joint.progress_bar)
 
+
+	    commandsWidget = QWidget()
+            hbox_commands = QHBoxLayout()
+
+	    hbox_commands.addStretch()
+
+            rememberButton = QPushButton("Remember")
+            rememberButton.pressed.connect(controller.remember)
+	    hbox_commands.addWidget(rememberButton)
+
+	    recallButton = QPushButton("Recall")
+            recallButton.pressed.connect(controller.recall)
+	    hbox_commands.addWidget(recallButton)
+            
+	    hbox_commands.addStretch()
+	    commandsWidget.setLayout(hbox_commands)
+            vbox.addWidget(commandsWidget)
+
             vbox.addStretch()
 
             frame.setLayout(vbox)
             widget.addWidget(frame)
+
+	    # Define checkboxes
+
+           
 
     ##
     # Load Robot Model from parameter server and create all groups/controller with their joints with respect to the config file
