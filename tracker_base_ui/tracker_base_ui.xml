@@ -1,0 +1,12 @@
+<library path="lib">
+  <class name="TrackerBaseUi" type="TrackerBaseUi.TrackerBaseUi" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      A Python GUI plugin to have a basic control and insight to tracker base
+    </description>
+    <qtgui>
+      <label>Tracker Supervision</label>
+      <icon type="theme">utilities-system-monitor</icon>
+      <statustip>A Python GUI plugin to have a basic control and insight to tracker base</statustip>
+    </qtgui>
+  </class>
+</library>
