@@ -1,0 +1,7 @@
+<library path="lib/libhector_barrel_geotiff_plugin">
+  <class name="hector_barrel_geotiff_plugin/BarrelMapWriter" type="hector_barrel_geotiff_plugin::BarrelMapWriter" base_class_type="hector_geotiff::MapWriterPluginInterface">
+    <description>
+      This is a BarrelMapWriter plugin that draws barrels in the map.
+    </description>
+  </class>
+</library>
