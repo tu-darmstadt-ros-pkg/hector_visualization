@@ -6,6 +6,38 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/camera_subscriber.h>
+#include <tf/transform_listener.h>
+#include <tf_conversions/tf_eigen.h>
+#include <hector_barrel_detection/hector_barrel_detection.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_types.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/conversions.h>
+#include <pcl_ros/transforms.h>
+
+#include <pcl/io/pcd_io.h>
+ #include <pcl/filters/passthrough.h>
+ #include <pcl/filters/voxel_grid.h>
+ #include <pcl/filters/statistical_outlier_removal.h>
+ #include <pcl/ModelCoefficients.h>
+ #include <pcl/features/normal_3d.h>
+ #include <pcl/sample_consensus/method_types.h>
+ #include <pcl/sample_consensus/model_types.h>
+ #include <pcl/segmentation/sac_segmentation.h>
+ #include <pcl/filters/extract_indices.h>
+ #include <tf/transform_datatypes.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <opencv/highgui.h>
+#include<opencv/cv.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <hector_worldmodel_msgs/ImagePercept.h>
+#include <hector_worldmodel_msgs/PosePercept.h>
+#include <image_transport/image_transport.h>
+#include <message_filters/subscriber.h>
+
+#include <message_filters/sync_policies/approximate_time.h>
 namespace barrel_detection{
 
     class BarrelDetection {
@@ -24,7 +56,13 @@ namespace barrel_detection{
       ros::Publisher cloud_filtered_publisher_;
       ros::Publisher pose_publisher_;
       ros::Publisher barrel_marker_publisher_;
-      ros::Publisher percept_pub_;
+      ros::Publisher imagePercept_pub_;
+      ros::Publisher posePercept_pub_;
+      tf::TransformListener listener_;
+      Eigen::Affine3d to_map_;
+      pcl::PassThrough<pcl::PointXYZ> pass_;
+
+      ros::Publisher pcl_debug_pub_;
 
       int r_min;
       int r_max;
