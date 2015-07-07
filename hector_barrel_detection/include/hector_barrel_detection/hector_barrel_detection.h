@@ -48,6 +48,7 @@ namespace barrel_detection{
     protected:
     void PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_msg);
     void imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info);
+    void findCylinder(const sensor_msgs::PointCloud2::ConstPtr& pc_msg);
 
 
     private:
@@ -63,6 +64,8 @@ namespace barrel_detection{
       pcl::PassThrough<pcl::PointXYZ> pass_;
 
       ros::Publisher pcl_debug_pub_;
+
+      sensor_msgs::PointCloud2::ConstPtr current_pc_msg_;
 
       int r_min;
       int r_max;

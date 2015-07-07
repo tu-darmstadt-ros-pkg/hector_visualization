@@ -2,7 +2,7 @@
 
 namespace barrel_detection{
 BarrelDetection::BarrelDetection()
-{   ROS_INFO ("started!!!!!!!!!!!!!!");
+{   ROS_INFO("Barreldetection started");
     ros::NodeHandle pnh_("~");
     ros::NodeHandle nh_("");
     image_transport::ImageTransport it_(pnh_);
@@ -15,7 +15,7 @@ BarrelDetection::BarrelDetection()
     pnh_.param("b_max", b_max, 255);
 
     pcl_sub = nh_.subscribe("/openni/depth/points", 1, &BarrelDetection::PclCallback, this);
-    //        image_sub = it_.subscribeCamera("/openni/rgb/image_color", 10, &BarrelDetection::imageCallback, this);
+    image_sub = it_.subscribeCamera("/openni/rgb/image_color", 10, &BarrelDetection::imageCallback, this);
     cloud_filtered_publisher_ = pnh_.advertise<sensor_msgs::PointCloud2>       ("cloud_filtered_barrel", 0);
     pose_publisher_ = pnh_.advertise<geometry_msgs::PoseStamped>       ("pose_filtered_barrel", 0);
     barrel_marker_publisher_ = pnh_.advertise<visualization_msgs::MarkerArray>       ("marker_filtered_barrel", 0);
@@ -30,7 +30,7 @@ BarrelDetection::~BarrelDetection()
 
 void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info){
     //if(debug_){
-    ROS_INFO("in callback of image!!!!!!!!!!!!!");
+    ROS_INFO("image callback startet");
     //}
 
     //Read image with cvbridge
@@ -38,14 +38,19 @@ void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const
     cv_ptr = cv_bridge::toCvShare(img, sensor_msgs::image_encodings::BGR8);
     cv::Mat img_filtered(cv_ptr->image);
 
-    cv::imshow("image",img_filtered);
+    //cut image
+    float cutPercentage= 0.2;
+    cv::Size size= img_filtered.size();
+    img_filtered = img_filtered(cv::Rect(size.width*cutPercentage,size.height*cutPercentage,size.width*(1-2*cutPercentage),size.height*(1-2*cutPercentage)));
+
+//    cv::imshow("image",img_filtered);
 
 
     cv::Mat blueOnly;
     cv::inRange(img_filtered, cv::Scalar( b_min, g_min,r_min), cv::Scalar(b_max, g_max, r_max), blueOnly);
 
-    cv::imshow("blau",blueOnly);
-    cv::waitKey(1000);
+//    cv::imshow("blau",blueOnly);
+//    cv::waitKey(1000);
 
     //Perform blob detection
     cv::SimpleBlobDetector::Params params;
@@ -69,26 +74,34 @@ void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const
     {
         std::cout << keypoints.at(i).pt.x << std::endl;
     }
-    //Publish results
-    hector_worldmodel_msgs::ImagePercept ip;
+//    //Publish results
+//    hector_worldmodel_msgs::ImagePercept ip;
 
-    ip.header= img->header;
-    ip.info.class_id = "barrel";
-    ip.info.class_support = 1;
-    ip.camera_info =  *info;
+//    ip.header= img->header;
+//    ip.info.class_id = "barrel";
+//    ip.info.class_support = 1;
+//    ip.camera_info =  *info;
 
-    for(unsigned int i=0; i<keypoints.size();i++)
-    {
-        ip.x = keypoints.at(i).pt.x;
-        ip.y = keypoints.at(i).pt.y;
-        imagePercept_pub_.publish(ip);
-        ROS_INFO("Barrel blob found at image coord: (%f, %f)", ip.x, ip.y);
+//    for(unsigned int i=0; i<keypoints.size();i++)
+//    {
+//        ip.x = keypoints.at(i).pt.x;
+//        ip.y = keypoints.at(i).pt.y;
+//        imagePercept_pub_.publish(ip);
+//        ROS_INFO("Barrel blob found at image coord: (%f, %f)", ip.x, ip.y);
+//    }
+
+    if(keypoints.size()>0 && current_pc_msg_!=0){
+        findCylinder(current_pc_msg_);
     }
 
 
 }
 void BarrelDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_msg){
-    ROS_INFO("started callback");
+    current_pc_msg_= pc_msg;
+}
+
+void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_msg){
+    ROS_DEBUG("started pcl callback");
     pcl::PCLPointCloud2 pcl_pc2;
     pcl_conversions::toPCL(*pc_msg,pcl_pc2);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -199,7 +212,7 @@ void BarrelDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_m
     }
 
     if( cloud->points.size()>0)
-    { ROS_INFO("publish cylinder ");
+    { ROS_DEBUG("publish cylinder ");
 
         //Publish results
         hector_worldmodel_msgs::PosePercept pp;
@@ -208,7 +221,6 @@ void BarrelDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_m
         pp.header.stamp= pc_msg->header.stamp;
         pp.info.class_id= "barrel";
         pp.info.class_support=1;
-        pp.info.object_id="barrel";
         pp.info.object_support=1;
         pp.pose.pose.position.x= coefficients_cylinder->values[0];
         pp.pose.pose.position.y= coefficients_cylinder->values[1];
