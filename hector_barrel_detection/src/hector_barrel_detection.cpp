@@ -23,6 +23,9 @@ BarrelDetection::BarrelDetection()
     posePercept_pub_= nh_.advertise<hector_worldmodel_msgs::PosePercept>       ("/worldmodel/pose_percept", 0);
     pcl_debug_pub_=nh_.advertise<sensor_msgs::PointCloud2> ("barrel_pcl_debug", 0);
 
+    //TODO: change to getDistance2d/3d
+    worldmodel_srv_client_=nh_.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("/hector_octomap_server/get_distance_to_obstacle");
+
 }
 
 BarrelDetection::~BarrelDetection()
@@ -32,6 +35,14 @@ void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const
     //if(debug_){
     ROS_INFO("image callback startet");
     //}
+
+    hector_nav_msgs::GetDistanceToObstacle dist_msgs;
+    dist_msgs.request.point.header= img->header;
+    dist_msgs.request.point.point.z= 1;
+
+    worldmodel_srv_client_.call(dist_msgs);
+    float distance = dist_msgs.response.distance;
+
 
     //Read image with cvbridge
     cv_bridge::CvImageConstPtr cv_ptr;
@@ -101,7 +112,7 @@ void BarrelDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_m
 }
 
 void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_msg){
-    ROS_DEBUG("started pcl callback");
+    ROS_DEBUG("started cylinder search");
     pcl::PCLPointCloud2 pcl_pc2;
     pcl_conversions::toPCL(*pc_msg,pcl_pc2);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);

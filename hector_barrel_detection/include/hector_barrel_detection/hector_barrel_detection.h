@@ -34,10 +34,14 @@
 #include <sensor_msgs/image_encodings.h>
 #include <hector_worldmodel_msgs/ImagePercept.h>
 #include <hector_worldmodel_msgs/PosePercept.h>
+#include <hector_worldmodel_msgs/GetObjectModel.h>
 #include <image_transport/image_transport.h>
 #include <message_filters/subscriber.h>
+#include <hector_nav_msgs/GetDistanceToObstacle.h>
 
 #include <message_filters/sync_policies/approximate_time.h>
+#include <image_geometry/pinhole_camera_model.h>
+
 namespace barrel_detection{
 
     class BarrelDetection {
@@ -59,6 +63,7 @@ namespace barrel_detection{
       ros::Publisher barrel_marker_publisher_;
       ros::Publisher imagePercept_pub_;
       ros::Publisher posePercept_pub_;
+      ros::ServiceClient worldmodel_srv_client_;
       tf::TransformListener listener_;
       Eigen::Affine3d to_map_;
       pcl::PassThrough<pcl::PointXYZ> pass_;
@@ -73,6 +78,9 @@ namespace barrel_detection{
       int g_max;
       int b_min;
       int b_max;
+
+
+      typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
 
 
     };
