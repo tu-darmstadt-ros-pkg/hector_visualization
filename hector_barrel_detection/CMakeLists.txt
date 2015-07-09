@@ -13,6 +13,7 @@ find_package(catkin REQUIRED
   image_transport
   message_filters
   tf_conversions
+  image_geometry
 )
 
 find_package(PCL REQUIRED)
@@ -89,7 +90,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES hector_barrel_detection
-  CATKIN_DEPENDS pcl_ros roscpp message_filters pcl_conversions geometry_msgs visualization_msgs cv_bridge hector_worldmodel_msgs image_transport tf_conversions
+  CATKIN_DEPENDS pcl_ros roscpp message_filters pcl_conversions geometry_msgs visualization_msgs cv_bridge hector_worldmodel_msgs image_transport tf_conversions image_geometry
 #  DEPENDS system_lib
 )
 

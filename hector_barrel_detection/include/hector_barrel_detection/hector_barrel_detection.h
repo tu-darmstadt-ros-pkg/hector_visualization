@@ -52,10 +52,12 @@ namespace barrel_detection{
     protected:
     void PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_msg);
     void imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info);
-    void findCylinder(const sensor_msgs::PointCloud2::ConstPtr& pc_msg);
+    void findCylinder(const sensor_msgs::PointCloud2::ConstPtr& pc_msg, float xKey, float yKey);
 
 
     private:
+      typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
+
       ros::Subscriber pcl_sub;
       image_transport::CameraSubscriber image_sub;
       ros::Publisher cloud_filtered_publisher_;
@@ -68,6 +70,7 @@ namespace barrel_detection{
       Eigen::Affine3d to_map_;
       pcl::PassThrough<pcl::PointXYZ> pass_;
 
+      ros::Publisher debug_imagePoint_pub_;
       ros::Publisher pcl_debug_pub_;
 
       sensor_msgs::PointCloud2::ConstPtr current_pc_msg_;
@@ -78,10 +81,6 @@ namespace barrel_detection{
       int g_max;
       int b_min;
       int b_max;
-
-
-      typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
-
 
     };
 }
