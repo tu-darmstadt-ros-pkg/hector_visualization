@@ -19,10 +19,10 @@ namespace hector_barrel_detection_nodelet{
 
         pnh_.param("h_min", h_min, 100);
         pnh_.param("h_max", h_max, 140);
-        pnh_.param("v_min", v_min, 0);
-        pnh_.param("v_max", v_max, 255);
-        pnh_.param("s_min", s_min, 0);
+        pnh_.param("s_min", s_min, 100);
         pnh_.param("s_max", s_max, 255);
+        pnh_.param("v_min", v_min, 50);
+        pnh_.param("v_max", v_max, 200);
 
         pcl_sub = nh_.subscribe("/openni/depth/points", 1, &BarrelDetection::PclCallback, this);
         image_sub = it_.subscribeCamera("/openni/rgb/image_color", 10, &BarrelDetection::imageCallback, this);
