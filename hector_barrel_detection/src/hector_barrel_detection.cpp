@@ -158,9 +158,9 @@ void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const
         geometry_msgs::PointStamped point_in_map;
         try{
             ros::Time time = img->header.stamp;
-            listener_.waitForTransform("/base_link", img->header.frame_id,
+            listener_.waitForTransform("/map", img->header.frame_id,
                                        time, ros::Duration(3.0));
-            listener_.transformPoint("/base_link", const_point, point_in_map);
+            listener_.transformPoint("/map", const_point, point_in_map);
         }
         catch (tf::TransformException ex){
             ROS_ERROR("Lookup Transform failed: %s",ex.what());
@@ -193,9 +193,9 @@ void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_
     tf::StampedTransform transform_cloud_to_map;
     try{
         ros::Time time = pc_msg->header.stamp;
-        listener_.waitForTransform("/base_link", pc_msg->header.frame_id,
+        listener_.waitForTransform("/map", pc_msg->header.frame_id,
                                    time, ros::Duration(3.0));
-        listener_.lookupTransform("/base_link", pc_msg->header.frame_id,
+        listener_.lookupTransform("/map", pc_msg->header.frame_id,
                                   time, transform_cloud_to_map);
     }
     catch (tf::TransformException ex){
@@ -302,7 +302,7 @@ void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_
         if(square_distance < epsilon){
             inRange=true;
         }
-        std::cout<<square_distance<<std::endl;
+
     }
 
     //publish debug clysinderPose
