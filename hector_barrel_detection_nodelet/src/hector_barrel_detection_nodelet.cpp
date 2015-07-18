@@ -44,9 +44,7 @@ namespace hector_barrel_detection_nodelet{
     }
 
     void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info){
-        //if(debug_){
-        ROS_INFO("image callback startet");
-        //}
+        ROS_DEBUG("image callback startet");
 
         hector_nav_msgs::GetDistanceToObstacle dist_msgs;
         dist_msgs.request.point.header= img->header;
@@ -205,6 +203,7 @@ namespace hector_barrel_detection_nodelet{
 
     }
     void BarrelDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_msg){
+        ROS_DEBUG("pointcloud callback enterd");
         current_pc_msg_= pc_msg;
     }
 
@@ -246,12 +245,6 @@ namespace hector_barrel_detection_nodelet{
         pass_.setFilterLimits (zmin, zmax);
         pass_.filter (*cloud);
 
-        //              // downsample
-        //              pcl::VoxelGrid<pcl::PointXYZ> vg;
-        //              vg.setInputCloud (cloud);
-        //              vg.setLeafSize (0.03f, 0.03f, 0.03f);
-        //              vg.filter (*cloud);
-
         // Publish filtered cloud to ROS for debugging
         if (pcl_debug_pub_.getNumSubscribers() > 0){
             sensor_msgs::PointCloud2 filtered_msg;
@@ -259,15 +252,6 @@ namespace hector_barrel_detection_nodelet{
             filtered_msg.header.frame_id = cloud->header.frame_id;
             pcl_debug_pub_.publish(filtered_msg);
         }
-
-        //              // remove outliers
-        //              pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-        //              sor.setInputCloud (cloud);
-        //              sor.setMeanK (20);
-        //              sor.setStddevMulThresh (0.1);
-        //              sor.filter (*cloud);
-
-        //              begin = ros::Time::now();
 
         // trobar cilindre(s)
         ROS_DEBUG("Normal Estimation");
