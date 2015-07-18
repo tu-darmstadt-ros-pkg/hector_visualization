@@ -48,10 +48,13 @@ namespace hector_barrel_detection_nodelet{
 
         hector_nav_msgs::GetDistanceToObstacle dist_msgs;
         dist_msgs.request.point.header= img->header;
-        dist_msgs.request.point.point.z= 1;
+//        dist_msgs.request.point.point.z= 1;
 
-        worldmodel_srv_client_.call(dist_msgs);
-        float distance = dist_msgs.response.distance;
+//        worldmodel_srv_client_.call(dist_msgs);
+//        float distance = dist_msgs.response.distance;
+//        distance=1;
+
+        float distance;
 
         //Read image with cvbridge
         cv_bridge::CvImageConstPtr cv_ptr;
@@ -141,7 +144,7 @@ namespace hector_barrel_detection_nodelet{
             direction.normalize();
             //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
             //  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
-            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized() * distance);
+            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized());
             {
                 // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
                 // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
@@ -168,10 +171,11 @@ namespace hector_barrel_detection_nodelet{
 
             // project image percept to the next obstacle
             dist_msgs.request.point.header = ip.header;
-            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);
+            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);            
 
             worldmodel_srv_client_.call(dist_msgs);
-
+std::cout<< dist_msgs.request.point.point <<std::endl;
+std::cout<< dist_msgs.response.distance <<std::endl;
             distance = std::max(dist_msgs.response.distance, 0.0f);
             pose.setOrigin(pose.getOrigin().normalized() * distance);
 
@@ -194,7 +198,7 @@ namespace hector_barrel_detection_nodelet{
 
             debug_imagePoint_pub_.publish(point_in_map);
 
-            if(current_pc_msg_!=0){
+            if(current_pc_msg_!=0 && distance>0){
                 findCylinder(current_pc_msg_, point_in_map.point.x, point_in_map.point.y);
             }
 
