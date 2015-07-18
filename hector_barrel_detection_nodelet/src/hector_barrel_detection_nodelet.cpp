@@ -306,8 +306,7 @@ namespace hector_barrel_detection_nodelet{
         }
 
         geometry_msgs::Point possibleCylinderPoint;
-        //TODO: set to true
-        bool inRange= true;
+        bool inRange= false;
         float epsilon= 0.25;
         if( cloud->points.size()>0){
             possibleCylinderPoint.x= coefficients_cylinder->values[0];
