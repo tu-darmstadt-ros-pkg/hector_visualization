@@ -2,7 +2,7 @@
 <launch>
 <!--<node name="hector_barrel_detection_node" pkg="hector_barrel_detection_nodelet" type="hector_barrel_detection_node" respawn="true" output="screen"> -->
 
-  <node pkg="nodelet" type="nodelet" name="hector_barrel_detection"  args="manager" output="screen"/>
+  <node pkg="nodelet" type="nodelet" name="hector_barrel_detection"  args="manager" output="screen" respawn="true"/>
 
   <node pkg="nodelet" type="nodelet" name="hector_barrel_detection_nodelet" args="load hector_barrel_detection_nodelet/hector_barrel_detection_nodelet hector_barrel_detection" output="screen">
 
