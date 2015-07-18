@@ -174,8 +174,7 @@ namespace hector_barrel_detection_nodelet{
             tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);            
 
             worldmodel_srv_client_.call(dist_msgs);
-std::cout<< dist_msgs.request.point.point <<std::endl;
-std::cout<< dist_msgs.response.distance <<std::endl;
+
             distance = std::max(dist_msgs.response.distance, 0.0f);
             pose.setOrigin(pose.getOrigin().normalized() * distance);
 
@@ -284,7 +283,7 @@ std::cout<< dist_msgs.response.distance <<std::endl;
         seg.setRadiusLimits (0.1,0.4);
         seg.setInputCloud (cloud);
         seg.setInputNormals (cloud_normals);
-        ROS_INFO("search cylinders");
+        ROS_DEBUG("search cylinders");
         Eigen::Vector3f v = Eigen::Vector3f(0.0, 0.0, 1.0);
         seg.setAxis(v);
         seg.segment (*inliers_cylinder, *coefficients_cylinder);
@@ -296,7 +295,7 @@ std::cout<< dist_msgs.response.distance <<std::endl;
         extract.setIndices (inliers_cylinder);
         extract.setNegative (false);
         extract.filter (*cloud);
-        ROS_INFO_STREAM("Extracted: " << cloud->points.size ());
+        ROS_DEBUG_STREAM("Extracted: " << cloud->points.size ());
 
         // Cylinder Cloud Publisher
         if (cloud_filtered_publisher_.getNumSubscribers() > 0){
@@ -307,7 +306,8 @@ std::cout<< dist_msgs.response.distance <<std::endl;
         }
 
         geometry_msgs::Point possibleCylinderPoint;
-        bool inRange= false;
+        //TODO: set to true
+        bool inRange= true;
         float epsilon= 0.25;
         if( cloud->points.size()>0){
             possibleCylinderPoint.x= coefficients_cylinder->values[0];
@@ -348,7 +348,7 @@ std::cout<< dist_msgs.response.distance <<std::endl;
             pp.pose.pose.orientation.w= 1;
 
             posePercept_pub_.publish(pp);
-            ROS_INFO("PosePercept published");
+            ROS_DEBUG("PosePercept published");
 
             // MARKERS ADD
             ROS_DEBUG("initialize markerArray");
