@@ -138,47 +138,46 @@ namespace hector_barrel_detection_nodelet{
             cameraModel->fromCameraInfo(info);
 
             // transform Point using the camera model
-            cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(ip.x, ip.y));
+            cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(ip.x+size.width*cutPercentage, ip.y+size.height*cutPercentage));
             cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
             tf::Point direction(direction_cv.x, direction_cv.y, direction_cv.z);
             direction.normalize();
             //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
             //  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
-            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized());
-            {
-                // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
-                // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
-                const tf::Point &d(direction); // for readability
-                if (d.y() >= 0.999) {
-                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
-                                                 1.,  0.,  0.,
-                                                 0.,  0.,  1. ));
-                } else if (d.y() <= -0.999) {
-                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
-                                                 -1.,  0.,  0.,
-                                                 0.,  0., -1.));
-                } else {
-                    double c = 1./sqrt(1. - d.y()*d.y());
-                    //      pose.setBasis(tf::Matrix3x3( c*d.z(), -c*d.x()*d.y(), d.x(),
-                    //                                         0, 1./c,           d.y(),
-                    //                                  -c*d.x(), -c*d.y()*d.z(), d.z()));
-                    pose.setBasis(tf::Matrix3x3(d.x(), -c*d.z(), c*d.x()*d.y(),
-                                                d.y(),        0,         -1./c,
-                                                d.z(),  c*d.x(), c*d.y()*d.z() ));
-                }
-            }
+//            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized());
+//            {
+//                // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
+//                // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
+//                const tf::Point &d(direction); // for readability
+//                if (d.y() >= 0.999) {
+//                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
+//                                                 1.,  0.,  0.,
+//                                                 0.,  0.,  1. ));
+//                } else if (d.y() <= -0.999) {
+//                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
+//                                                 -1.,  0.,  0.,
+//                                                 0.,  0., -1.));
+//                } else {
+//                    double c = 1./sqrt(1. - d.y()*d.y());
+//                    //      pose.setBasis(tf::Matrix3x3( c*d.z(), -c*d.x()*d.y(), d.x(),
+//                    //                                         0, 1./c,           d.y(),
+//                    //                                  -c*d.x(), -c*d.y()*d.z(), d.z()));
+//                    pose.setBasis(tf::Matrix3x3(d.x(), -c*d.z(), c*d.x()*d.y(),
+//                                                d.y(),        0,         -1./c,
+//                                                d.z(),  c*d.x(), c*d.y()*d.z() ));
+//                }
+//            }
 
 
             // project image percept to the next obstacle
             dist_msgs.request.point.header = ip.header;
-            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);            
+            tf::pointTFToMsg(direction, dist_msgs.request.point.point);
 
             worldmodel_srv_client_.call(dist_msgs);
 
             distance = std::max(dist_msgs.response.distance, 0.0f);
-            pose.setOrigin(pose.getOrigin().normalized() * distance);
 
-            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);
+            tf::pointTFToMsg(direction.normalized() * distance, dist_msgs.request.point.point);
 
             //transformation point to /map
             //TODO:: change base_link to /map
@@ -242,11 +241,28 @@ namespace hector_barrel_detection_nodelet{
 
 
         // Filtrar area
+        //z
         float zmin=0.2,zmax=1.1;
         pass_.setInputCloud (cloud);
         pass_.setFilterFieldName ("z");
         pass_.setFilterLimits (zmin, zmax);
         pass_.filter (*cloud);
+
+//        //x
+//        float xmin=0.2;
+//        float xmax=1.1;
+//        pass_.setInputCloud (cloud);
+//        pass_.setFilterFieldName ("x");
+//        pass_.setFilterLimits (zmin, zmax);
+//        pass_.filter (*cloud);
+
+//        //y
+//        float ymin=0.2;
+//        float ymax=1.1;
+//        pass_.setInputCloud (cloud);
+//        pass_.setFilterFieldName ("y");
+//        pass_.setFilterLimits (zmin, zmax);
+//        pass_.filter (*cloud);
 
         // Publish filtered cloud to ROS for debugging
         if (pcl_debug_pub_.getNumSubscribers() > 0){
@@ -429,7 +445,6 @@ namespace hector_barrel_detection_nodelet{
                 }
             }
         }
-
 
         cv_bridge::CvImage cvImg;
         cvImg.image = img_filtered;
