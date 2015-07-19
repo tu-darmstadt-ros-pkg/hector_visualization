@@ -131,7 +131,7 @@ public:
       Eigen::Vector2f coords;
       coords.x() = object.pose.pose.position.x;
       coords.y() = object.pose.pose.position.y;
-      interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(240,240,10));
+      interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(180,0,200));
 
 
     }

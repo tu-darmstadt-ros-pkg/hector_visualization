@@ -44,16 +44,17 @@ namespace hector_barrel_detection_nodelet{
     }
 
     void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info){
-        //if(debug_){
-        ROS_INFO("image callback startet");
-        //}
+        ROS_DEBUG("image callback startet");
 
         hector_nav_msgs::GetDistanceToObstacle dist_msgs;
         dist_msgs.request.point.header= img->header;
-        dist_msgs.request.point.point.z= 1;
+//        dist_msgs.request.point.point.z= 1;
 
-        worldmodel_srv_client_.call(dist_msgs);
-        float distance = dist_msgs.response.distance;
+//        worldmodel_srv_client_.call(dist_msgs);
+//        float distance = dist_msgs.response.distance;
+//        distance=1;
+
+        float distance;
 
         //Read image with cvbridge
         cv_bridge::CvImageConstPtr cv_ptr;
@@ -143,7 +144,7 @@ namespace hector_barrel_detection_nodelet{
             direction.normalize();
             //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
             //  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
-            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized() * distance);
+            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized());
             {
                 // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
                 // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
@@ -170,7 +171,7 @@ namespace hector_barrel_detection_nodelet{
 
             // project image percept to the next obstacle
             dist_msgs.request.point.header = ip.header;
-            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);
+            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);            
 
             worldmodel_srv_client_.call(dist_msgs);
 
@@ -196,7 +197,7 @@ namespace hector_barrel_detection_nodelet{
 
             debug_imagePoint_pub_.publish(point_in_map);
 
-            if(current_pc_msg_!=0){
+            if(current_pc_msg_!=0 && distance>0){
                 findCylinder(current_pc_msg_, point_in_map.point.x, point_in_map.point.y);
             }
 
@@ -205,6 +206,7 @@ namespace hector_barrel_detection_nodelet{
 
     }
     void BarrelDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_msg){
+        ROS_DEBUG("pointcloud callback enterd");
         current_pc_msg_= pc_msg;
     }
 
@@ -246,12 +248,6 @@ namespace hector_barrel_detection_nodelet{
         pass_.setFilterLimits (zmin, zmax);
         pass_.filter (*cloud);
 
-        //              // downsample
-        //              pcl::VoxelGrid<pcl::PointXYZ> vg;
-        //              vg.setInputCloud (cloud);
-        //              vg.setLeafSize (0.03f, 0.03f, 0.03f);
-        //              vg.filter (*cloud);
-
         // Publish filtered cloud to ROS for debugging
         if (pcl_debug_pub_.getNumSubscribers() > 0){
             sensor_msgs::PointCloud2 filtered_msg;
@@ -259,15 +255,6 @@ namespace hector_barrel_detection_nodelet{
             filtered_msg.header.frame_id = cloud->header.frame_id;
             pcl_debug_pub_.publish(filtered_msg);
         }
-
-        //              // remove outliers
-        //              pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-        //              sor.setInputCloud (cloud);
-        //              sor.setMeanK (20);
-        //              sor.setStddevMulThresh (0.1);
-        //              sor.filter (*cloud);
-
-        //              begin = ros::Time::now();
 
         // trobar cilindre(s)
         ROS_DEBUG("Normal Estimation");
@@ -296,7 +283,7 @@ namespace hector_barrel_detection_nodelet{
         seg.setRadiusLimits (0.1,0.4);
         seg.setInputCloud (cloud);
         seg.setInputNormals (cloud_normals);
-        ROS_INFO("search cylinders");
+        ROS_DEBUG("search cylinders");
         Eigen::Vector3f v = Eigen::Vector3f(0.0, 0.0, 1.0);
         seg.setAxis(v);
         seg.segment (*inliers_cylinder, *coefficients_cylinder);
@@ -308,7 +295,7 @@ namespace hector_barrel_detection_nodelet{
         extract.setIndices (inliers_cylinder);
         extract.setNegative (false);
         extract.filter (*cloud);
-        ROS_INFO_STREAM("Extracted: " << cloud->points.size ());
+        ROS_DEBUG_STREAM("Extracted: " << cloud->points.size ());
 
         // Cylinder Cloud Publisher
         if (cloud_filtered_publisher_.getNumSubscribers() > 0){
@@ -360,7 +347,7 @@ namespace hector_barrel_detection_nodelet{
             pp.pose.pose.orientation.w= 1;
 
             posePercept_pub_.publish(pp);
-            ROS_INFO("PosePercept published");
+            ROS_DEBUG("PosePercept published");
 
             // MARKERS ADD
             ROS_DEBUG("initialize markerArray");
