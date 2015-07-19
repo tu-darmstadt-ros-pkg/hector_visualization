@@ -9,7 +9,7 @@ from python_qt_binding.QtCore import QEvent, QModelIndex, QObject, Qt, QTimer, S
 from python_qt_binding.QtGui import QShortcut, QTableWidgetItem, QWidget, QLCDNumber, QItemDelegate, QAbstractItemView
 from rospy import Time
 from std_msgs.msg import Bool
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Empty
 
 
 class TrackerBaseUi(QObject):
@@ -22,6 +22,7 @@ class TrackerBaseUi(QObject):
         # setup publisher
         self._WhiteLightPublisher = rospy.Publisher('/light', Bool)
         self._BlueLightPublisher = rospy.Publisher('/bluelight', Bool)
+        self._EmptyPublisher = rospy.Publisher('/init_flipper', Empty)
 
         # setup main widget
         self._widget = QWidget()
@@ -49,7 +50,7 @@ class TrackerBaseUi(QObject):
 
         # connect Signal Slot
         self._update_task_delegates.connect(self._on_update_task_delegates)
-         
+        self._widget.empty_button.pressed.connect(self._on_empty_pressed) 
         self.supply = -1
         self._widget.supply_lineEdit.setText('unknown')
         # init percept model
@@ -79,6 +80,8 @@ class TrackerBaseUi(QObject):
     def _on_blue_changed(self,value):
         self._BlueLightPublisher.publish(value)
 
+    def _on_empty_pressed(self):
+        self._EmptyPublisher.publish(Empty())
     
 
     def _on_update_task_delegates(self):
