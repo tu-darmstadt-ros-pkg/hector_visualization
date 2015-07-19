@@ -48,11 +48,6 @@ namespace hector_barrel_detection_nodelet{
 
         hector_nav_msgs::GetDistanceToObstacle dist_msgs;
         dist_msgs.request.point.header= img->header;
-//        dist_msgs.request.point.point.z= 1;
-
-//        worldmodel_srv_client_.call(dist_msgs);
-//        float distance = dist_msgs.response.distance;
-//        distance=1;
 
         float distance;
 
@@ -130,8 +125,6 @@ namespace hector_barrel_detection_nodelet{
 
             ROS_DEBUG("Barrel blob found at image coord: (%f, %f)", ip.x, ip.y);
 
-            tf::Pose pose;
-
             // retrieve camera model from either the cache or from CameraInfo given in the percept
             CameraModelPtr cameraModel;
             cameraModel.reset(new image_geometry::PinholeCameraModel());
@@ -142,32 +135,6 @@ namespace hector_barrel_detection_nodelet{
             cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
             tf::Point direction(direction_cv.x, direction_cv.y, direction_cv.z);
             direction.normalize();
-            //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
-            //  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
-//            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized());
-//            {
-//                // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
-//                // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
-//                const tf::Point &d(direction); // for readability
-//                if (d.y() >= 0.999) {
-//                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
-//                                                 1.,  0.,  0.,
-//                                                 0.,  0.,  1. ));
-//                } else if (d.y() <= -0.999) {
-//                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
-//                                                 -1.,  0.,  0.,
-//                                                 0.,  0., -1.));
-//                } else {
-//                    double c = 1./sqrt(1. - d.y()*d.y());
-//                    //      pose.setBasis(tf::Matrix3x3( c*d.z(), -c*d.x()*d.y(), d.x(),
-//                    //                                         0, 1./c,           d.y(),
-//                    //                                  -c*d.x(), -c*d.y()*d.z(), d.z()));
-//                    pose.setBasis(tf::Matrix3x3(d.x(), -c*d.z(), c*d.x()*d.y(),
-//                                                d.y(),        0,         -1./c,
-//                                                d.z(),  c*d.x(), c*d.y()*d.z() ));
-//                }
-//            }
-
 
             // project image percept to the next obstacle
             dist_msgs.request.point.header = ip.header;
@@ -179,25 +146,10 @@ namespace hector_barrel_detection_nodelet{
 
             tf::pointTFToMsg(direction.normalized() * distance, dist_msgs.request.point.point);
 
-            //transformation point to /map
-            //TODO:: change base_link to /map
             const geometry_msgs::PointStamped const_point=dist_msgs.request.point;
-            geometry_msgs::PointStamped point_in_map;
-            try{
-                ros::Time time = img->header.stamp;
-                listener_.waitForTransform("/map", img->header.frame_id,
-                                           time, ros::Duration(3.0));
-                listener_.transformPoint("/map", const_point, point_in_map);
-            }
-            catch (tf::TransformException ex){
-                ROS_ERROR("Lookup Transform failed: %s",ex.what());
-                return;
-            }
-
-            debug_imagePoint_pub_.publish(point_in_map);
 
             if(current_pc_msg_!=0 && distance>0){
-                findCylinder(current_pc_msg_, point_in_map.point.x, point_in_map.point.y);
+                findCylinder(current_pc_msg_, const_point);
             }
 
         }
@@ -209,12 +161,28 @@ namespace hector_barrel_detection_nodelet{
         current_pc_msg_= pc_msg;
     }
 
-    void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_msg, float xKey, float yKey){
+    void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_msg, const geometry_msgs::PointStamped cut_around_keypoint){
         ROS_DEBUG("started cylinder search");
         pcl::PCLPointCloud2 pcl_pc2;
         pcl_conversions::toPCL(*pc_msg,pcl_pc2);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::fromPCLPointCloud2(pcl_pc2,*cloud);
+        pcl::fromPCLPointCloud2(pcl_pc2,*cloud);        
+
+        // Filtrar area in openni_depth_optical_frame
+        //x (width)
+        float xmin=cut_around_keypoint.point.x-0.3;
+        float xmax=cut_around_keypoint.point.x+0.3;
+        pass_.setInputCloud (cloud);
+        pass_.setFilterFieldName ("x");
+        pass_.setFilterLimits (xmin, xmax);
+        pass_.filter (*cloud);
+        //y (height; z in /map)
+        float ymin=cut_around_keypoint.point.y-0.4;
+        float ymax=cut_around_keypoint.point.y+0.4;
+        pass_.setInputCloud (cloud);
+        pass_.setFilterFieldName ("y");
+        pass_.setFilterLimits (ymin, ymax);
+        pass_.filter (*cloud);
 
         //transformation cloud to /map
         //TODO:: change base_link to /map
@@ -238,31 +206,6 @@ namespace hector_barrel_detection_nodelet{
         pcl::transformPointCloud(*cloud, *cloud_tmp, to_map_);
         cloud = cloud_tmp;
         cloud->header.frame_id= transform_cloud_to_map.frame_id_;
-
-
-        // Filtrar area
-        //z
-        float zmin=0.2,zmax=1.1;
-        pass_.setInputCloud (cloud);
-        pass_.setFilterFieldName ("z");
-        pass_.setFilterLimits (zmin, zmax);
-        pass_.filter (*cloud);
-
-//        //x
-//        float xmin=0.2;
-//        float xmax=1.1;
-//        pass_.setInputCloud (cloud);
-//        pass_.setFilterFieldName ("x");
-//        pass_.setFilterLimits (zmin, zmax);
-//        pass_.filter (*cloud);
-
-//        //y
-//        float ymin=0.2;
-//        float ymax=1.1;
-//        pass_.setInputCloud (cloud);
-//        pass_.setFilterFieldName ("y");
-//        pass_.setFilterLimits (zmin, zmax);
-//        pass_.filter (*cloud);
 
         // Publish filtered cloud to ROS for debugging
         if (pcl_debug_pub_.getNumSubscribers() > 0){
@@ -296,7 +239,7 @@ namespace hector_barrel_detection_nodelet{
         seg.setNormalDistanceWeight (0.1);
         seg.setMaxIterations (50);
         seg.setDistanceThreshold (0.05);
-        seg.setRadiusLimits (0.1,0.4);
+        seg.setRadiusLimits (0.15,0.4);
         seg.setInputCloud (cloud);
         seg.setInputNormals (cloud_normals);
         ROS_DEBUG("search cylinders");
@@ -321,33 +264,46 @@ namespace hector_barrel_detection_nodelet{
             cloud_filtered_publisher_.publish(cyl_msg);
         }
 
-        geometry_msgs::Point possibleCylinderPoint;
-        bool inRange= false;
-        float epsilon= 0.25;
-        if( cloud->points.size()>0){
-            possibleCylinderPoint.x= coefficients_cylinder->values[0];
-            possibleCylinderPoint.y= coefficients_cylinder->values[1];
-            float square_distance= std::abs(possibleCylinderPoint.x - xKey)*std::abs(possibleCylinderPoint.x - xKey) +
-                    std::abs(possibleCylinderPoint.y - yKey)*std::abs(possibleCylinderPoint.y - yKey);
-            if(square_distance < epsilon){
-                inRange=true;
-            }
+      //TODO: check ob gebraucht
+        bool inRange=true;
+//        geometry_msgs::Point possibleCylinderPoint;
+//        bool inRange= false;
+//        float epsilon= 0.25;
+//        if( cloud->points.size()>0){
+//            possibleCylinderPoint.x= coefficients_cylinder->values[0];
+//            possibleCylinderPoint.y= coefficients_cylinder->values[1];
+//            float square_distance= std::abs(possibleCylinderPoint.x - xKey)*std::abs(possibleCylinderPoint.x - xKey) +
+//                    std::abs(possibleCylinderPoint.y - yKey)*std::abs(possibleCylinderPoint.y - yKey);
+//            if(square_distance < epsilon){
+//                inRange=true;
+//            }
 
-        }
+//        }
 
         //publish debug clysinderPose
         if (pose_publisher_.getNumSubscribers() > 0){
             geometry_msgs::PoseStamped pose_msg;
             pose_msg.header.frame_id=cloud->header.frame_id;
             pose_msg.header.stamp=pc_msg->header.stamp;
-            pose_msg.pose.position.x=possibleCylinderPoint.x;
-            pose_msg.pose.position.y=possibleCylinderPoint.y;
+            pose_msg.pose.position.x=coefficients_cylinder->values[0];
+            pose_msg.pose.position.y=coefficients_cylinder->values[1];
             pose_publisher_.publish(pose_msg);
         }
 
         if( cloud->points.size()>0 && inRange)
         { ROS_DEBUG("publish cylinder ");
-
+            //Transformation to /map
+            geometry_msgs::PointStamped point_in_map;
+            try{
+                ros::Time time = cut_around_keypoint.header.stamp;
+                listener_.waitForTransform("/map", cut_around_keypoint.header.frame_id,
+                                           time, ros::Duration(3.0));
+                listener_.transformPoint("/map", cut_around_keypoint, point_in_map);
+            }
+            catch (tf::TransformException ex){
+                ROS_ERROR("Lookup Transform failed: %s",ex.what());
+                return;
+            }
             //Publish results
             hector_worldmodel_msgs::PosePercept pp;
 
@@ -358,11 +314,14 @@ namespace hector_barrel_detection_nodelet{
             pp.info.object_support=1;
             pp.pose.pose.position.x= coefficients_cylinder->values[0];
             pp.pose.pose.position.y= coefficients_cylinder->values[1];
-            pp.pose.pose.position.z= 0.6;
+            pp.pose.pose.position.z= point_in_map.point.z;
             pp.pose.pose.orientation.x= pp.pose.pose.orientation.y = pp.pose.pose.orientation.z= 0;
             pp.pose.pose.orientation.w= 1;
 
-            posePercept_pub_.publish(pp);
+            //publish barrels between z < 1.1 or z > 1.7 only
+            if(pp.pose.pose.position.z < 1.1 || pp.pose.pose.position.z >1.7){
+               posePercept_pub_.publish(pp);
+            }
             ROS_DEBUG("PosePercept published");
 
             // MARKERS ADD
