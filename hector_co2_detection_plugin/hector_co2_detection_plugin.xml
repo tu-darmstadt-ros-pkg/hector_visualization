@@ -1,0 +1,12 @@
+<library path="lib">
+  <class name="CO2Detection" type="CO2Detection.CO2Detection" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      A Python GUI plugin to have a basic visualization of co2 detection
+    </description>
+    <qtgui>
+      <label>CO2Detection</label>
+      <icon type="theme">utilities-system-monitor</icon>
+      <statustip> A Python GUI plugin to have a basic visualization of co2 detection</statustip>
+    </qtgui>
+  </class>
+</library>
