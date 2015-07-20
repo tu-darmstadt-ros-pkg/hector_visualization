@@ -264,22 +264,6 @@ namespace hector_barrel_detection_nodelet{
             cloud_filtered_publisher_.publish(cyl_msg);
         }
 
-      //TODO: check ob gebraucht
-        bool inRange=true;
-//        geometry_msgs::Point possibleCylinderPoint;
-//        bool inRange= false;
-//        float epsilon= 0.25;
-//        if( cloud->points.size()>0){
-//            possibleCylinderPoint.x= coefficients_cylinder->values[0];
-//            possibleCylinderPoint.y= coefficients_cylinder->values[1];
-//            float square_distance= std::abs(possibleCylinderPoint.x - xKey)*std::abs(possibleCylinderPoint.x - xKey) +
-//                    std::abs(possibleCylinderPoint.y - yKey)*std::abs(possibleCylinderPoint.y - yKey);
-//            if(square_distance < epsilon){
-//                inRange=true;
-//            }
-
-//        }
-
         //publish debug clysinderPose
         if (pose_publisher_.getNumSubscribers() > 0){
             geometry_msgs::PoseStamped pose_msg;
@@ -290,7 +274,7 @@ namespace hector_barrel_detection_nodelet{
             pose_publisher_.publish(pose_msg);
         }
 
-        if( cloud->points.size()>0 && inRange)
+        if( cloud->points.size()>0)
         { ROS_DEBUG("publish cylinder ");
             //Transformation to /map
             geometry_msgs::PointStamped point_in_map;
