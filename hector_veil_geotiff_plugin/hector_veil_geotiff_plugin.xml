@@ -1,0 +1,7 @@
+<library path="lib/libhector_veil_geotiff_plugin">
+  <class name="hector_veil_geotiff_plugin/VeilMapWriter" type="hector_veil_geotiff_plugin::VeilMapWriter" base_class_type="hector_geotiff::MapWriterPluginInterface">
+    <description>
+      This is a VeilMapWriter plugin that draws veils in the map.
+    </description>
+  </class>
+</library>
