@@ -23,6 +23,9 @@ namespace hector_barrel_detection_nodelet{
         pnh_.param("s_max", s_max, 255);
         pnh_.param("v_min", v_min, 50);
         pnh_.param("v_max", v_max, 200);
+        pnh_.param("bluePart", bluePart, 4.0);
+        pnh_.param("minRadius", minRadius, 0.15);
+        pnh_.param("maxRadius", maxRadius, 0.4);
 
         pcl_sub = nh_.subscribe("/openni/depth/points", 1, &BarrelDetection::PclCallback, this);
         image_sub = it_.subscribeCamera("/openni/rgb/image_color", 10, &BarrelDetection::imageCallback, this);
@@ -93,7 +96,7 @@ namespace hector_barrel_detection_nodelet{
         params.minDistBetweenBlobs = 0.5;
         params.filterByArea = true;
         //TODO: tune parameter
-        params.minArea = (blueOnly.rows * blueOnly.cols) /16;
+        params.minArea = (blueOnly.rows * blueOnly.cols) /bluePart;
         //    params.minArea = (blueOnly.rows * blueOnly.cols) / (0.5+distance);
         params.maxArea = blueOnly.rows * blueOnly.cols;
         params.filterByCircularity = false;
@@ -158,6 +161,7 @@ namespace hector_barrel_detection_nodelet{
             const geometry_msgs::PointStamped const_point=dist_msgs.request.point;
             geometry_msgs::PointStamped point_in_map;
             try{
+                //TODO::change Duration back to 3.0
                 ros::Time time = img->header.stamp;
                 listener_.waitForTransform("/map", img->header.frame_id,
                                            time, ros::Duration(3.0));
@@ -212,6 +216,7 @@ namespace hector_barrel_detection_nodelet{
         //TODO:: change base_link to /map
         tf::StampedTransform transform_cloud_to_map;
         try{
+            //TODO::change Duration back to 3.0
             ros::Time time = pc_msg->header.stamp;
             listener_.waitForTransform("/map", pc_msg->header.frame_id,
                                        time, ros::Duration(3.0));
@@ -263,8 +268,8 @@ namespace hector_barrel_detection_nodelet{
         seg.setMethodType (pcl::SAC_RANSAC);
         seg.setNormalDistanceWeight (0.1);
         seg.setMaxIterations (50);
-        seg.setDistanceThreshold (0.05);
-        seg.setRadiusLimits (0.15,0.4);
+        seg.setDistanceThreshold (0.01);
+        seg.setRadiusLimits (minRadius, maxRadius);
         seg.setInputCloud (cloud);
         seg.setInputNormals (cloud_normals);
         ROS_DEBUG("search cylinders");
@@ -318,6 +323,7 @@ namespace hector_barrel_detection_nodelet{
             //Transformation to /map
             geometry_msgs::PointStamped point_in_map;
             try{
+                //TODO::change Duration back to 3.0
                 ros::Time time = cut_around_keypoint.header.stamp;
                 listener_.waitForTransform("/map", cut_around_keypoint.header.frame_id,
                                            time, ros::Duration(3.0));
@@ -344,7 +350,7 @@ namespace hector_barrel_detection_nodelet{
             //publish cylinder z<1.1 or z>1.7 only (in simulation z>1.4)
             if(pp.pose.pose.position.z < 1.1 && pp.pose.pose.position.z >0.2){
                 posePercept_pub_.publish(pp);
-                ROS_DEBUG("PosePercept published");
+                ROS_INFO("PosePercept published");
             }
 
             // MARKERS ADD
@@ -448,6 +454,9 @@ namespace hector_barrel_detection_nodelet{
         s_max= config.max_S_value;
         v_min= config.min_V_value;
         v_max= config.max_V_value;
+        bluePart= config.bluePart;
+        minRadius= config.minRadius;
+        maxRadius= config.maxRadius;
 
     }
 

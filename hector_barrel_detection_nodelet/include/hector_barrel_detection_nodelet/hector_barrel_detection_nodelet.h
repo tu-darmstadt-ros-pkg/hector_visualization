@@ -93,6 +93,9 @@ private:
     int s_max;
     int h_min;
     int h_max;
+    double bluePart;
+    double minRadius;
+    double maxRadius;
 
 };
 }
