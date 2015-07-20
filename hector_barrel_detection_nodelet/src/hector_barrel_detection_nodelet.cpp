@@ -138,7 +138,7 @@ namespace hector_barrel_detection_nodelet{
             cameraModel->fromCameraInfo(info);
 
             // transform Point using the camera model
-            cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(ip.x, ip.y));
+            cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(ip.x+size.width*cutPercentage, ip.y+size.height*cutPercentage));
             cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
             tf::Point direction(direction_cv.x, direction_cv.y, direction_cv.z);
             direction.normalize();
