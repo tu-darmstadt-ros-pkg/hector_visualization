@@ -121,13 +121,10 @@ public:
       return;
     }
 
-
     int counter =0;
     for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
       const hector_worldmodel_msgs::Object& object = *it;
-
       if (!class_id_.empty() && object.info.class_id != class_id_) continue;
-
       Eigen::Vector2f coords;
       coords.x() = object.pose.pose.position.x;
       coords.y() = object.pose.pose.position.y;

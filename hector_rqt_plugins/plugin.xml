@@ -29,4 +29,14 @@
       <statustip>A GUI plugin to view the flipper position and control them.</statustip>
     </qtgui>
   </class>
+  <class name="rqt_map_merger/MapMerger" type="rqt_map_merger::MapMerger" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      A GUI plugin to view map merging
+    </description>
+    <qtgui>
+      <label>Map Merging</label>
+      <icon type="theme">image-x-generic</icon>
+      <statustip>A GUI plugin to view map merging</statustip>
+    </qtgui>
+  </class>
 </library>
