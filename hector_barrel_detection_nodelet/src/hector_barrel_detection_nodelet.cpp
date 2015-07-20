@@ -342,7 +342,7 @@ namespace hector_barrel_detection_nodelet{
             pp.pose.pose.orientation.w= 1;
 
             //publish cylinder z<1.1 or z>1.7 only (in simulation z>1.4)
-            if(pp.pose.pose.position.z < 1.1 || pp.pose.pose.position.z >1.7){
+            if(pp.pose.pose.position.z < 1.1 && pp.pose.pose.position.z >0.2){
                 posePercept_pub_.publish(pp);
                 ROS_DEBUG("PosePercept published");
             }
