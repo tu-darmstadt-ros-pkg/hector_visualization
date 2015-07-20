@@ -142,43 +142,16 @@ namespace hector_barrel_detection_nodelet{
             cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
             tf::Point direction(direction_cv.x, direction_cv.y, direction_cv.z);
             direction.normalize();
-            //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
-            //  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
-            pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized());
-            {
-                // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
-                // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
-                const tf::Point &d(direction); // for readability
-                if (d.y() >= 0.999) {
-                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
-                                                 1.,  0.,  0.,
-                                                 0.,  0.,  1. ));
-                } else if (d.y() <= -0.999) {
-                    pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
-                                                 -1.,  0.,  0.,
-                                                 0.,  0., -1.));
-                } else {
-                    double c = 1./sqrt(1. - d.y()*d.y());
-                    //      pose.setBasis(tf::Matrix3x3( c*d.z(), -c*d.x()*d.y(), d.x(),
-                    //                                         0, 1./c,           d.y(),
-                    //                                  -c*d.x(), -c*d.y()*d.z(), d.z()));
-                    pose.setBasis(tf::Matrix3x3(d.x(), -c*d.z(), c*d.x()*d.y(),
-                                                d.y(),        0,         -1./c,
-                                                d.z(),  c*d.x(), c*d.y()*d.z() ));
-                }
-            }
-
 
             // project image percept to the next obstacle
             dist_msgs.request.point.header = ip.header;
-            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);            
+            tf::pointTFToMsg(direction, dist_msgs.request.point.point);
 
             worldmodel_srv_client_.call(dist_msgs);
 
             distance = std::max(dist_msgs.response.distance, 0.0f);
-            pose.setOrigin(pose.getOrigin().normalized() * distance);
 
-            tf::pointTFToMsg(pose.getOrigin(), dist_msgs.request.point.point);
+            tf::pointTFToMsg(direction.normalized() * distance, dist_msgs.request.point.point);
 
             //transformation point to /map
             //TODO:: change base_link to /map
@@ -195,10 +168,12 @@ namespace hector_barrel_detection_nodelet{
                 return;
             }
 
-            debug_imagePoint_pub_.publish(point_in_map);
+            if(debug_imagePoint_pub_.getNumSubscribers()>0){
+                debug_imagePoint_pub_.publish(point_in_map);
+            }
 
             if(current_pc_msg_!=0 && distance>0){
-                findCylinder(current_pc_msg_, point_in_map.point.x, point_in_map.point.y);
+                findCylinder(current_pc_msg_, point_in_map.point.x, point_in_map.point.y, const_point);
             }
 
         }
@@ -210,12 +185,28 @@ namespace hector_barrel_detection_nodelet{
         current_pc_msg_= pc_msg;
     }
 
-    void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_msg, float xKey, float yKey){
+    void BarrelDetection::findCylinder(const sensor_msgs::PointCloud2::ConstPtr &pc_msg, float xKey, float yKey, const geometry_msgs::PointStamped cut_around_keypoint){
         ROS_DEBUG("started cylinder search");
         pcl::PCLPointCloud2 pcl_pc2;
         pcl_conversions::toPCL(*pc_msg,pcl_pc2);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::fromPCLPointCloud2(pcl_pc2,*cloud);
+
+        // Filtrar area in openni_depth_optical_frame
+        //x (width)
+        float xmin=cut_around_keypoint.point.x-0.3;
+        float xmax=cut_around_keypoint.point.x+0.3;
+        pass_.setInputCloud (cloud);
+        pass_.setFilterFieldName ("x");
+        pass_.setFilterLimits (xmin, xmax);
+        pass_.filter (*cloud);
+        //y (height; z in /map)
+        float ymin=cut_around_keypoint.point.y-0.4;
+        float ymax=cut_around_keypoint.point.y+0.4;
+        pass_.setInputCloud (cloud);
+        pass_.setFilterFieldName ("y");
+        pass_.setFilterLimits (ymin, ymax);
+        pass_.filter (*cloud);
 
         //transformation cloud to /map
         //TODO:: change base_link to /map
@@ -240,13 +231,6 @@ namespace hector_barrel_detection_nodelet{
         cloud = cloud_tmp;
         cloud->header.frame_id= transform_cloud_to_map.frame_id_;
 
-
-        // Filtrar area
-        float zmin=0.2,zmax=1.1;
-        pass_.setInputCloud (cloud);
-        pass_.setFilterFieldName ("z");
-        pass_.setFilterLimits (zmin, zmax);
-        pass_.filter (*cloud);
 
         // Publish filtered cloud to ROS for debugging
         if (pcl_debug_pub_.getNumSubscribers() > 0){
@@ -280,7 +264,7 @@ namespace hector_barrel_detection_nodelet{
         seg.setNormalDistanceWeight (0.1);
         seg.setMaxIterations (50);
         seg.setDistanceThreshold (0.05);
-        seg.setRadiusLimits (0.1,0.4);
+        seg.setRadiusLimits (0.15,0.4);
         seg.setInputCloud (cloud);
         seg.setInputNormals (cloud_normals);
         ROS_DEBUG("search cylinders");
@@ -331,7 +315,18 @@ namespace hector_barrel_detection_nodelet{
 
         if( cloud->points.size()>0 && inRange)
         { ROS_DEBUG("publish cylinder ");
-
+            //Transformation to /map
+            geometry_msgs::PointStamped point_in_map;
+            try{
+                ros::Time time = cut_around_keypoint.header.stamp;
+                listener_.waitForTransform("/map", cut_around_keypoint.header.frame_id,
+                                           time, ros::Duration(3.0));
+                listener_.transformPoint("/map", cut_around_keypoint, point_in_map);
+            }
+            catch (tf::TransformException ex){
+                ROS_ERROR("Lookup Transform failed: %s",ex.what());
+                return;
+            }
             //Publish results
             hector_worldmodel_msgs::PosePercept pp;
 
@@ -342,12 +337,15 @@ namespace hector_barrel_detection_nodelet{
             pp.info.object_support=1;
             pp.pose.pose.position.x= coefficients_cylinder->values[0];
             pp.pose.pose.position.y= coefficients_cylinder->values[1];
-            pp.pose.pose.position.z= 0.6;
+            pp.pose.pose.position.z= point_in_map.point.z;
             pp.pose.pose.orientation.x= pp.pose.pose.orientation.y = pp.pose.pose.orientation.z= 0;
             pp.pose.pose.orientation.w= 1;
 
-            posePercept_pub_.publish(pp);
-            ROS_DEBUG("PosePercept published");
+            //publish cylinder z<1.1 or z>1.7 only (in simulation z>1.4)
+            if(pp.pose.pose.position.z < 1.1 || pp.pose.pose.position.z >1.4){
+                posePercept_pub_.publish(pp);
+                ROS_DEBUG("PosePercept published");
+            }
 
             // MARKERS ADD
             ROS_DEBUG("initialize markerArray");

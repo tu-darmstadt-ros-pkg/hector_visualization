@@ -56,7 +56,7 @@ public:
 protected:
     void PclCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_msg);
     void imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info);
-    void findCylinder(const sensor_msgs::PointCloud2::ConstPtr& pc_msg, float xKey, float yKey);
+    void findCylinder(const sensor_msgs::PointCloud2::ConstPtr& pc_msg, float xKey, float yKey, const geometry_msgs::PointStamped cut_around_keypoint);
 
 
 private:
