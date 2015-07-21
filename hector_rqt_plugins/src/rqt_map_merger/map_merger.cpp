@@ -91,7 +91,7 @@ void MapMerger::initPlugin(qt_gui_cpp::PluginContext& context)
   connect(ui_.merge_button, SIGNAL(pressed()), this, SLOT(onMergePressed()));
   connect(ui_.save_geotiff_button, SIGNAL(pressed()), this, SLOT(onSaveGeotiffPressed()));
   connect(ui_.use_stored_transform_checkBox, SIGNAL(stateChanged(int)), this, SLOT(onStateUseTransformChanged(int)));
-  connect(ui_.store_current_transform_button, SIGNAL(pressed(int)), this, SLOT(onGetTransform(int)));
+  connect(ui_.store_current_transform_button, SIGNAL(pressed()), this, SLOT(onGetTransform()));
 
   redraw_Label_1();
   redraw_Label_2();
@@ -154,6 +154,7 @@ void MapMerger::onStateUseTransformChanged(int checked){
 }
 
 void MapMerger::onGetTransform(){
+    std::cout << "1" <<stored_idx_1_ <<"2" <<stored_idx_2_ << std::endl;
     stored_transform = current_transform;
     stored_idx_1_ = current_idx_1_;
     stored_idx_2_ = current_idx_2_;
@@ -212,7 +213,7 @@ void MapMerger::redraw_Label_merged(){
 
      if (cv_maps_1_.size() > 0 && cv_maps_2_.size()>0 && og_maps_1_.size()>0 && og_maps_2_.size()>0){
 
-         StitchedMap stitched_map(cv_maps_1_[current_idx_1_], cv_maps_2_[current_idx_2_],stored_transform);
+         StitchedMap stitched_map(cv_maps_1_[stored_idx_1_], cv_maps_2_[stored_idx_2_],stored_transform);
          if (!use_stored_transform_){
              stitched_map =StitchedMap(cv_maps_1_[current_idx_1_], cv_maps_2_[current_idx_2_]);
          }
