@@ -84,6 +84,8 @@ public slots:
   void onSlider2Moved(int idx);
   void onMergePressed();
   void onSaveGeotiffPressed();
+  void onStateUseTransformChanged(int checked);
+  void onGetTransform();
 
 
 protected:
@@ -124,11 +126,20 @@ protected:
   QMutex qimage_mutex_;
 
   cv::Mat conversion_mat_;
+  cv::Mat stored_transform;
+  cv::Mat current_transform;
 
   ros::NodeHandle my_nh_;
 
   int current_idx_1_;
   int current_idx_2_;
+
+  int stored_idx_1_;
+  int stored_idx_2_;
+
+  bool use_stored_transform_;
+  int first_map_1_received;
+  int first_map_2_received;
 
   ros::Timer map_save_timer_;
 

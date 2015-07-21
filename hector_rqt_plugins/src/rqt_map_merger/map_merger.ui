@@ -74,6 +74,9 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QLineEdit" name="map_1_text"/>
+         </item>
         </layout>
        </item>
        <item>
@@ -123,7 +126,38 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QLineEdit" name="map_2_text"/>
+         </item>
         </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Use stored Transform</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="use_stored_transform_checkBox">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="stored_transform_text"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="store_current_transform_button">
+         <property name="text">
+          <string>Store Current </string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>

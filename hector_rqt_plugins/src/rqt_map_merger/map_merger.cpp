@@ -47,6 +47,7 @@
 #include "hector_mapstitch/mapstitch.h"
 #include "hector_mapstitch/utils.h"
 #include <std_msgs/String.h>
+#include <sstream>
 
 namespace rqt_map_merger {
 
@@ -89,11 +90,24 @@ void MapMerger::initPlugin(qt_gui_cpp::PluginContext& context)
   connect(ui_.map_hector2_horizontalSlider, SIGNAL(valueChanged(int)), this, SLOT(onSlider2Moved(int)));
   connect(ui_.merge_button, SIGNAL(pressed()), this, SLOT(onMergePressed()));
   connect(ui_.save_geotiff_button, SIGNAL(pressed()), this, SLOT(onSaveGeotiffPressed()));
+  connect(ui_.use_stored_transform_checkBox, SIGNAL(stateChanged(int)), this, SLOT(onStateUseTransformChanged(int)));
+  connect(ui_.store_current_transform_button, SIGNAL(pressed(int)), this, SLOT(onStateUseTransformChanged(int)));
+
   redraw_Label_1();
   redraw_Label_2();
    map_save_timer_ = my_nh_.createTimer(ros::Duration(20.0), &MapMerger::timerCallback, this, false );
   current_idx_1_ = 0;
   current_idx_2_ = 0;
+  stored_idx_1_ = 0;
+  stored_idx_2_ = 0;
+  use_stored_transform_ = false;
+  first_map_1_received =0;
+  first_map_2_received =0;
+
+  std::stringstream sstr;
+  sstr << stored_idx_1_ << " | " << stored_idx_2_;
+
+  ui_.stored_transform_text->setText(sstr.str().c_str());
 }
 
  void MapMerger::timerCallback(const ros::TimerEvent& e){
@@ -107,18 +121,46 @@ void MapMerger::initPlugin(qt_gui_cpp::PluginContext& context)
   ui_.map_hector2_horizontalSlider->setRange(0,qimages_2_.size()-1);
  }
 
+
+
 void MapMerger::onSlider1Moved(int idx){
   current_idx_1_ = idx;
+
+  std::stringstream sstr;
+  sstr << idx;
+
+  ui_.map_1_text->setText(sstr.str().c_str());
   redraw_Label_1();
 }
 
 void MapMerger::onSlider2Moved(int idx){
   current_idx_2_ = idx;
+
+  std::stringstream sstr;
+  sstr << idx;
+
+  ui_.map_2_text->setText(sstr.str().c_str());
   redraw_Label_2();
 }
 
 void MapMerger::onMergePressed(){
     redraw_Label_merged();
+}
+
+void MapMerger::onStateUseTransformChanged(int checked){
+    use_stored_transform_ = checked;
+    stored_transform = current_transform;
+
+}
+
+void MapMerger::onGetTransform(){
+    stored_transform = current_transform;
+    stored_idx_1_ = current_idx_1_;
+    stored_idx_2_ = current_idx_2_;
+    std::stringstream sstr;
+    sstr << stored_idx_1_  << " | " << stored_idx_2_;
+
+    ui_.stored_transform_text->setText(sstr.str().c_str());
 }
 
 void MapMerger::onSaveGeotiffPressed(){
@@ -169,7 +211,12 @@ void MapMerger::redraw_Label_2(){
 void MapMerger::redraw_Label_merged(){
 
      if (cv_maps_1_.size() > 0 && cv_maps_2_.size()>0 && og_maps_1_.size()>0 && og_maps_2_.size()>0){
-    StitchedMap stitched_map(cv_maps_1_[current_idx_1_], cv_maps_2_[current_idx_2_]);
+
+         StitchedMap stitched_map(cv_maps_1_[current_idx_1_], cv_maps_2_[current_idx_2_],stored_transform);
+         if (!use_stored_transform_){
+             stitched_map =StitchedMap(cv_maps_1_[current_idx_1_], cv_maps_2_[current_idx_2_]);
+         }
+
 
     if(stitched_map.isValid())
     {
@@ -188,6 +235,9 @@ void MapMerger::redraw_Label_merged(){
 
         map_1_to_use_pub_.publish(og_maps_1_[current_idx_1_]);
         map_2_to_use_pub_.publish(og_maps_2_[current_idx_2_]);
+
+
+        current_transform = stitched_map.H;
     }
 
     }
@@ -242,6 +292,8 @@ void MapMerger::map1Callback(nav_msgs::OccupancyGridConstPtr const & map)
 
 
 
+
+
 }
 
 void MapMerger::map2Callback(nav_msgs::OccupancyGridConstPtr const & map)
@@ -258,6 +310,12 @@ void MapMerger::map2Callback(nav_msgs::OccupancyGridConstPtr const & map)
 
     cv_map_2_ = map2_cv;
     og_map_2_ = *map;
+
+    if (!first_map_2_received){
+
+        first_map_2_received = true;
+        redraw_Label_2();
+    }
 
 
 }
