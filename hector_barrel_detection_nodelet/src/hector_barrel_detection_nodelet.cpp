@@ -26,6 +26,7 @@ namespace hector_barrel_detection_nodelet{
         pnh_.param("bluePart", bluePart, 4.0);
         pnh_.param("minRadius", minRadius, 0.15);
         pnh_.param("maxRadius", maxRadius, 0.4);
+        pnh_.param<std::string>("/hector_barrel_detection_nodelet/packagePath", packagePath, "defaultPath");
 
         pcl_sub = nh_.subscribe("/openni/depth/points", 1, &BarrelDetection::PclCallback, this);
         image_sub = it_.subscribeCamera("/openni/rgb/image_color", 10, &BarrelDetection::imageCallback, this);
@@ -37,13 +38,23 @@ namespace hector_barrel_detection_nodelet{
         pcl_debug_pub_= pnh_.advertise<sensor_msgs::PointCloud2> ("barrel_pcl_debug", 0);
         debug_imagePoint_pub_= pnh_.advertise<geometry_msgs::PointStamped>("blaDebugPoseEstimate",0);
         black_white_image_pub_= it_.advertiseCamera("black_white_image",1);
+        debug_groundTruthBarrel_pub_= pnh_.advertise<geometry_msgs::PointStamped>("blaDebugPoseEstimate",0);
 
         worldmodel_srv_client_=nh_.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("/hector_octomap_server/get_distance_to_obstacle");
 
+        //dynamic reconfigure
         pub_imageDetection = it_.advertiseCamera("barrelDetectionImage", 1);
         dynamic_recf_type = boost::bind(&BarrelDetection::dynamic_recf_cb, this, _1, _2);
         dynamic_recf_server.setCallback(dynamic_recf_type);
 
+        // load groundTruthPointCloud
+        pcl::PolygonMeshPtr groundTruthCylinderMesh(new pcl::PolygonMesh);
+        pcl::io::loadPolygonFilePLY(packagePath +"/groundTruthPointClouds/trash_can_half.ply", *groundTruthCylinderMesh);
+
+        pcl::PCLPointCloud2 pcl_pc2 = groundTruthCylinderMesh->cloud;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr tempPCL(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::fromPCLPointCloud2(pcl_pc2,*tempPCL);
+        groundTruthCylinder= tempPCL;
     }
 
     void BarrelDetection::imageCallback(const sensor_msgs::ImageConstPtr& img, const sensor_msgs::CameraInfoConstPtr& info){
@@ -294,8 +305,16 @@ namespace hector_barrel_detection_nodelet{
             cloud_filtered_publisher_.publish(cyl_msg);
         }
 
+        bool valid= false;
+        bool qualityEpsilon=5;
+        std::cout<< "fickScheiß" <<std::endl;
+        double qualitiyCylinder= getQualityValueForCylinder(cloud);
+        std::cout<< qualitiyCylinder <<std::endl;
+        if(qualitiyCylinder > qualityEpsilon){
+            valid= true;
+        }
+valid=true;
         geometry_msgs::Point possibleCylinderPoint;
-        bool inRange= false;
         float epsilon= 0.25;
         if( cloud->points.size()>0){
             possibleCylinderPoint.x= coefficients_cylinder->values[0];
@@ -303,7 +322,7 @@ namespace hector_barrel_detection_nodelet{
             float square_distance= std::abs(possibleCylinderPoint.x - xKey)*std::abs(possibleCylinderPoint.x - xKey) +
                     std::abs(possibleCylinderPoint.y - yKey)*std::abs(possibleCylinderPoint.y - yKey);
             if(square_distance < epsilon){
-                inRange=true;
+                valid=true;
             }
 
         }
@@ -318,7 +337,7 @@ namespace hector_barrel_detection_nodelet{
             pose_publisher_.publish(pose_msg);
         }
 
-        if( cloud->points.size()>0 && inRange)
+        if( cloud->points.size()>0 && valid)
         { ROS_DEBUG("publish cylinder ");
             //Transformation to /map
             geometry_msgs::PointStamped point_in_map;
@@ -458,6 +477,25 @@ namespace hector_barrel_detection_nodelet{
         minRadius= config.minRadius;
         maxRadius= config.maxRadius;
 
+    }
+
+    double BarrelDetection::getQualityValueForCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr& possibleCylinder){
+        //ICP
+        std::cout<<"11111111111111111111111111"<<std::endl;
+        pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+        std::cout<<"2222222222222222222222222"<<std::endl;
+        icp.setInputCloud(possibleCylinder);
+        std::cout<<"3333333333333333333333333"<<std::endl;
+        icp.setInputTarget(groundTruthCylinder);
+        std::cout<<"4444444444444444444444444"<<std::endl;
+
+        pcl::PointCloud<pcl::PointXYZ> final;
+        std::cout<<"5555555555555555555555555"<<std::endl;
+        icp.align(final);
+        std::cout<<"6666666666666666666666666"<<std::endl;
+
+        return icp.getFitnessScore();
+        return 10.0;
     }
 
 }

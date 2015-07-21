@@ -17,6 +17,8 @@
 #include <pcl_ros/transforms.h>
 
 #include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/io/vtk_lib_io.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
@@ -26,6 +28,8 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
 #include <tf/transform_datatypes.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -44,6 +48,9 @@
 #include <image_geometry/pinhole_camera_model.h>
 #include <dynamic_reconfigure/server.h>
 #include <hector_barrel_detection_nodelet/BarrelDetectionConfig.h>
+
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
 
 namespace hector_barrel_detection_nodelet{
 
@@ -75,10 +82,14 @@ private:
     pcl::PassThrough<pcl::PointXYZ> pass_;
 
     ros::Publisher debug_imagePoint_pub_;
+    ros::Publisher debug_groundTruthBarrel_pub_;
     ros::Publisher pcl_debug_pub_;
     image_transport::CameraPublisher black_white_image_pub_;
 
     sensor_msgs::PointCloud2::ConstPtr current_pc_msg_;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr groundTruthCylinder;
+    double getQualityValueForCylinder(pcl::PointCloud<pcl::PointXYZ>::Ptr& possibleCylinder);
 
     //Dynamic reconfigure
     dynamic_reconfigure::Server<hector_barrel_detection_nodelet::BarrelDetectionConfig> dynamic_recf_server;
@@ -96,6 +107,7 @@ private:
     double bluePart;
     double minRadius;
     double maxRadius;
+    std::string packagePath;
 
 };
 }

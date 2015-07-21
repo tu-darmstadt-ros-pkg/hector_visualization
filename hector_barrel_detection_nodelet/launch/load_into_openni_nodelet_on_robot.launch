@@ -9,6 +9,7 @@
     <param name="v_min" type="int" value="50" />
     <param name="v_max" type="int" value="200" />
     <param name="percentage_blue" type="int" value="8" />
+    <param name="packagePath" value="$(find hector_barrel_detection_nodelet)" />
   </node>
   
 </launch>
