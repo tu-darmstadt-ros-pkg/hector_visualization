@@ -237,7 +237,7 @@ void MapMerger::redraw_Label_merged(){
         map_2_to_use_pub_.publish(og_maps_2_[current_idx_2_]);
 
 
-        current_transform = stitched_map.H;
+        current_transform = stitched_map.getRigidTransform().clone();
     }
 
     }
