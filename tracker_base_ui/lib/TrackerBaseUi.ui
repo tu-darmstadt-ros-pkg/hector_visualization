@@ -62,11 +62,26 @@
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="empty_button">
-     <property name="text">
-      <string>Empty Button</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QGraphicsView" name="graphicsView_Flipper"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QPushButton" name="empty_button">
+         <property name="text">
+          <string>Calibrate Flipper</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
    </item>
    <item>
     <spacer name="verticalSpacer">

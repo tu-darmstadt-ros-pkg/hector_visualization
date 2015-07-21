@@ -3,13 +3,14 @@ import rospy
 import rospkg
 import math
 
+from PyQt4 import QtGui, QtCore
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import QEvent, QModelIndex, QObject, Qt, QTimer, Signal, Slot
 from python_qt_binding.QtGui import QShortcut, QTableWidgetItem, QWidget, QLCDNumber, QItemDelegate, QAbstractItemView
 from rospy import Time
 from std_msgs.msg import Bool
-from std_msgs.msg import Float32, Empty
+from std_msgs.msg import Float64, Float32, Empty
 
 
 class TrackerBaseUi(QObject):
@@ -23,6 +24,8 @@ class TrackerBaseUi(QObject):
         self._WhiteLightPublisher = rospy.Publisher('/light', Bool)
         self._BlueLightPublisher = rospy.Publisher('/bluelight', Bool)
         self._EmptyPublisher = rospy.Publisher('/init_flipper', Empty)
+
+	self._FlipperStateSubsciber = rospy.Subscriber('/flipper_control/state', Float64, self._on_flipper_state)
 
         # setup main widget
         self._widget = QWidget()
@@ -54,11 +57,20 @@ class TrackerBaseUi(QObject):
         self.supply = -1
         self._widget.supply_lineEdit.setText('unknown')
         # init percept model
-        
+
+	self.flipper_scene = QtGui.QGraphicsScene(self)
+        self.flipper_scene.setSceneRect(QtCore.QRectF(-200, -200, 200, 200))
+
+        self._widget.graphicsView_Flipper.setScene(self.flipper_scene)
+	self.flipper_state = 0;
+	rospy.Timer(rospy.Duration(0.1), self.draw_flipper_state)
         
     def _on_tracker_supply(self, message):
         self.supply = message.data
         self._update_task_delegates.emit()
+
+    def _on_flipper_state(self, message):
+	self.flipper_state = message.data
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here
@@ -89,4 +101,28 @@ class TrackerBaseUi(QObject):
             self._widget.supply_lineEdit.setText('unknown')
         else:
             self._widget.supply_lineEdit.setText(str(self.supply))
-   
+
+    def draw_flipper_state(self, event):
+
+	length = 100
+	y = length * math.cos(-self.flipper_state)
+	x = length * math.sin(-self.flipper_state)
+
+	self.flipper_scene.clear()
+
+	item = QtGui.QGraphicsEllipseItem(-25, -25, 50, 50)
+	self.flipper_scene.addItem(item)
+
+	item = QtGui.QGraphicsLineItem(0, 0, -y, x)
+	self.flipper_scene.addItem(item)
+
+	self._widget.graphicsView_Flipper.show()
+
+	item = QtGui.QGraphicsLineItem(0, 0, -100, 10)
+	#self.flipper_scene.addItem(item)
+
+	item = QtGui.QGraphicsLineItem(0, 0, -100, -10)
+	#self.flipper_scene.addItem(item)
+
+
+
