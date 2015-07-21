@@ -91,7 +91,7 @@ void MapMerger::initPlugin(qt_gui_cpp::PluginContext& context)
   connect(ui_.save_geotiff_button, SIGNAL(pressed()), this, SLOT(onSaveGeotiffPressed()));
   redraw_Label_1();
   redraw_Label_2();
-   map_save_timer_ = my_nh_.createTimer(ros::Duration(10.0), &MapMerger::timerCallback, this, false );
+   map_save_timer_ = my_nh_.createTimer(ros::Duration(20.0), &MapMerger::timerCallback, this, false );
   current_idx_1_ = 0;
   current_idx_2_ = 0;
 }
