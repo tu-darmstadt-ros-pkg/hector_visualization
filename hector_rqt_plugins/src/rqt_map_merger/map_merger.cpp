@@ -91,7 +91,7 @@ void MapMerger::initPlugin(qt_gui_cpp::PluginContext& context)
   connect(ui_.merge_button, SIGNAL(pressed()), this, SLOT(onMergePressed()));
   connect(ui_.save_geotiff_button, SIGNAL(pressed()), this, SLOT(onSaveGeotiffPressed()));
   connect(ui_.use_stored_transform_checkBox, SIGNAL(stateChanged(int)), this, SLOT(onStateUseTransformChanged(int)));
-  connect(ui_.store_current_transform_button, SIGNAL(pressed(int)), this, SLOT(onStateUseTransformChanged(int)));
+  connect(ui_.store_current_transform_button, SIGNAL(pressed(int)), this, SLOT(onGetTransform(int)));
 
   redraw_Label_1();
   redraw_Label_2();
