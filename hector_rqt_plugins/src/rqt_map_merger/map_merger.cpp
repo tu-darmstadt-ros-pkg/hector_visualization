@@ -113,7 +113,6 @@ void MapMerger::onSlider1Moved(int idx){
 }
 
 void MapMerger::onSlider2Moved(int idx){
-    std::cout << "idx " << idx << std::endl;
   current_idx_2_ = idx;
   redraw_Label_2();
 }
@@ -135,9 +134,7 @@ void MapMerger::redraw_Label_1(){
       qimage_mutex_.lock();
 
       QImage image_scaled = qimages_1_[current_idx_1_].scaled(ui_.map1_label->width(), ui_.map1_label->height(), Qt::IgnoreAspectRatio );
-
-     // QImage image_scaled = qimages_1_[current_idx_1_].scaled(ui_.map1_label->width(), ui_.map1_label->height(), Qt::IgnoreAspectRatio );
-      ui_.map1_label->setPixmap(QPixmap::fromImage(image_scaled));
+       ui_.map1_label->setPixmap(QPixmap::fromImage(image_scaled));
 
       qimage_mutex_.unlock();
 
@@ -153,8 +150,6 @@ void MapMerger::redraw_Label_2(){
 
     if (qimages_2_.size()>0)
     {
-       std::cout <<"drawing 2" << std::cout;
-       std::cout << "mal idx" << current_idx_2_<<std::endl;
       qimage_mutex_.lock();
 
 
@@ -173,8 +168,7 @@ void MapMerger::redraw_Label_2(){
 
 void MapMerger::redraw_Label_merged(){
 
-    //std::cout << cv_maps_1_.size() <<","<<cv_maps_2_.size()<<","<<og_maps_1_.size()<<","<<og_maps_2_.size()<<std::endl;
-    if (cv_maps_1_.size() > 0 && cv_maps_2_.size()>0 && og_maps_1_.size()>0 && og_maps_2_.size()>0){
+     if (cv_maps_1_.size() > 0 && cv_maps_2_.size()>0 && og_maps_1_.size()>0 && og_maps_2_.size()>0){
     StitchedMap stitched_map(cv_maps_1_[current_idx_1_], cv_maps_2_[current_idx_2_]);
 
     if(stitched_map.isValid())
@@ -257,7 +251,6 @@ void MapMerger::map2Callback(nav_msgs::OccupancyGridConstPtr const & map)
     map2_cv.convertTo(gray, CV_8UC1);
     cv::cvtColor(gray, conversion_mat_, CV_GRAY2RGB);
     QImage image(conversion_mat_.data, conversion_mat_.cols, conversion_mat_.rows, QImage::Format_RGB888);
-   // QImage image= QImage(map2_cv.data, map2_cv.cols, map2_cv.rows, map2_cv.step, QImage::Format_RGB888);
 
     qimage_mutex_.lock();
     qimage_2_ = image.copy();
@@ -280,11 +273,6 @@ nav_msgs::OccupancyGrid MapMerger::cvMatToOccupancyGrid(const cv::Mat * im)
 
     for(size_t i = 0; i < map.data.size(); ++i)
     {
-//        double map_val = (255. - im->data[i]) / 255.;
-//        if(map_val > .65) map.data[i] = 100;
-//        else if(map_val <= 0.196) map.data[i] = 0;
-//        else map.data[i] = -1;
-
         uint8_t map_val = im->data[i];
         if(map_val == 0) map.data[i] = 100;
         else if(map_val == 254) map.data[i] = 0;
