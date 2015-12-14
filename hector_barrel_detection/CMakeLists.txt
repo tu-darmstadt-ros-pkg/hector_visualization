@@ -14,6 +14,8 @@ find_package(catkin REQUIRED
   message_filters
   tf_conversions
   image_geometry
+  geometry_msgs
+  hector_worldmodel_msgs
 )
 
 find_package(PCL REQUIRED)
