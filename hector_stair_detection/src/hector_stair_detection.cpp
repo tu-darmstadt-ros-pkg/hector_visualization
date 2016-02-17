@@ -31,8 +31,8 @@ HectorStairDetection::HectorStairDetection(){
     final_stairs_cloud_pub_=  nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/hector_stair_detection/final_stairs_cloud", 100, true);
     border_of_stairs_pub_= nh.advertise<visualization_msgs::MarkerArray>("/hector_stair_detection/boarder_of_stairs", 100, true);
     stairs_position_and_orientaion_pub_= nh.advertise<geometry_msgs::PoseStamped>("/hector_stair_detection/stairs_orientation", 100, true);
-    stairs_position_and_orientaion_with_direction_pub_= nh.advertise<hector_stair_detection::PositionAndOrientaion>("/hector_stair_detection/stairs_orientaion_as_vector", 100, true);
-    border_and_orientation_stairs_combined_pub_= nh.advertise<hector_stair_detection::BorderAndOrientationOfStairs>("/hector_stair_detection/border_and_orientation_of_stairs", 100, true);
+    stairs_position_and_orientaion_with_direction_pub_= nh.advertise<hector_stair_detection_msgs::PositionAndOrientaion>("/hector_stair_detection/stairs_orientaion_as_vector", 100, true);
+    border_and_orientation_stairs_combined_pub_= nh.advertise<hector_stair_detection_msgs::BorderAndOrientationOfStairs>("/hector_stair_detection/border_and_orientation_of_stairs", 100, true);
 
 
     temp_orginal_pub_=nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/hector_stair_detection/temp_original", 100, true);
@@ -80,7 +80,7 @@ void HectorStairDetection::publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr
     geometry_msgs::PoseStamped position_and_orientaion;
     Eigen::Vector3f directionStairs;
     getStairsPositionAndOrientation(base, point, input_surface_cloud->header.frame_id, directionStairs, position_and_orientaion);
-    hector_stair_detection::PositionAndOrientaion pos_and_orientaion_message;
+    hector_stair_detection_msgs::PositionAndOrientaion pos_and_orientaion_message;
     pos_and_orientaion_message.orientation_of_stairs=position_and_orientaion;
     pos_and_orientaion_message.directionX=directionStairs(0);
     pos_and_orientaion_message.directionY=directionStairs(1);
@@ -98,7 +98,7 @@ void HectorStairDetection::publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr
         border_of_stairs_pub_.publish(stairs_boarder_marker);
     }
 
-    hector_stair_detection::BorderAndOrientationOfStairs border_and_orientation_msg;
+    hector_stair_detection_msgs::BorderAndOrientationOfStairs border_and_orientation_msg;
     border_and_orientation_msg.header.frame_id=input_surface_cloud->header.frame_id;
     border_and_orientation_msg.border_of_stairs= stairs_boarder_marker;
     border_and_orientation_msg.orientation_of_stairs=position_and_orientaion;

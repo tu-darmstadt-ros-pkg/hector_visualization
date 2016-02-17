@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   visualization_msgs
   std_msgs
+  hector_stair_detection_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -50,18 +51,18 @@ include_directories(${PCL_INCLUDE_DIRS})
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
- add_message_files(
-   FILES
-   BorderAndOrientationOfStairs.msg
-   PositionAndOrientaion.msg
- )
+# add_message_files(
+#   FILES
+#   BorderAndOrientationOfStairs.msg
+#   PositionAndOrientaion.msg
+# )
 
 ## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   StairDectection_StairsCloud_Srv.srv
-   StairDetection_StairPosition_Srv.srv
- )
+# add_service_files(
+#   FILES
+#   StairDectection_StairsCloud_Srv.srv
+#   StairDetection_StairPosition_Srv.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -71,13 +72,13 @@ include_directories(${PCL_INCLUDE_DIRS})
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs
-   sensor_msgs
-   geometry_msgs
-   visualization_msgs
- )
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#   sensor_msgs
+#   geometry_msgs
+#   visualization_msgs
+# )
 
 ###################################
 ## catkin specific configuration ##
@@ -91,7 +92,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 catkin_package(
  INCLUDE_DIRS include
   LIBRARIES hector_stair_detection
-  CATKIN_DEPENDS roscpp pcl_conversions tf_conversions sensor_msgs geometry_msgs std_msgs visualization_msgs
+  CATKIN_DEPENDS roscpp pcl_conversions tf_conversions sensor_msgs geometry_msgs std_msgs visualization_msgs hector_stair_detection_msgs
   DEPENDS system_lib
 )
 
@@ -114,7 +115,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 add_dependencies(hector_stair_detection ${catkin_EXPORTED_TARGETS})
 
 ## Declare a cpp executable
- add_executable(hector_stair_detection_node src/hector_stair_detection_node.cpp)
+add_executable(hector_stair_detection_node src/hector_stair_detection_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -128,6 +129,7 @@ add_dependencies(hector_stair_detection ${catkin_EXPORTED_TARGETS})
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${boost_LIBRARIES} ${PCL_LIBRARIES} libvtkCommon.so libvtkFiltering.so)
+
 #############
 ## Install ##
 #############

@@ -49,8 +49,8 @@
 
 #include <hector_stair_detection/hector_stair_detection.h>
 
-#include <hector_stair_detection/BorderAndOrientationOfStairs.h>
-#include <hector_stair_detection/PositionAndOrientaion.h>
+#include <hector_stair_detection_msgs/BorderAndOrientationOfStairs.h>
+#include <hector_stair_detection_msgs/PositionAndOrientaion.h>
 
 namespace hector_stair_detection{
 
