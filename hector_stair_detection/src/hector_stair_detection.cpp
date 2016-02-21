@@ -65,8 +65,8 @@ HectorStairDetection::HectorStairDetection(){
         //            pointCloud_world=srv.response.cloud;
         pcl_sub = nh.subscribe("/worldmodel_main/pointcloud_vis", 10, &HectorStairDetection::PclCallback, this);
     }else{
-        pcl_sub = nh.subscribe("/openni/depth/points", 1, &HectorStairDetection::PclCallback, this);
-        //        pcl_sub = nh.subscribe("/hector_octomap_server/octomap_point_cloud_centers", 1, &HectorStairDetection::PclCallback, this);
+//        pcl_sub = nh.subscribe("/openni/depth/points", 1, &HectorStairDetection::PclCallback, this);
+                pcl_sub = nh.subscribe("/hector_octomap_server/octomap_point_cloud_centers", 1, &HectorStairDetection::PclCallback, this);
     }
 
 }
@@ -418,7 +418,7 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     temp_after_voxel_grid_pub_.publish(processCloud_v2);
 
     pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
-    mls.setSearchRadius(0.05);
+    mls.setSearchRadius(0.1);
     mls.setPolynomialOrder(1);
     mls.setComputeNormals(true);
     mls.setInputCloud(processCloud_v2);
@@ -776,7 +776,7 @@ void HectorStairDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr&
                 if(points_on_line_cloud_debug_.getNumSubscribers()>0){
                     points_on_line_cloud_debug_.publish(debug_line_cloud);
                 }
-                if(maxDistBetweenPoints(debug_line_cloud) <= maxDistBetweenStairsPoints_ || minHightDistBetweenPoints(debug_line_cloud) > minHightDistBetweenAllStairsPoints_){
+                if(maxDistBetweenPoints(debug_line_cloud) <= maxDistBetweenStairsPoints_ && minHightDistBetweenPoints(debug_line_cloud) >= minHightDistBetweenAllStairsPoints_){
                     ROS_INFO("Staris; number points on line: %i", pointsAtLineCounter);
                     publishResults(input_surface_cloud, clusters, final_cluster_idx, base, direction+base);
                 }else{
