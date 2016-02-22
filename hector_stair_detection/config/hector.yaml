@@ -14,4 +14,4 @@ clusterMinSize: 50
 clusterMaxSize: 300
 setup: hector
 maxDistBetweenStairsPoints: 2.0
-minHightDistBetweenAllStairsPoints: 0.1
+minHightDistBetweenAllStairsPoints: 0.05
