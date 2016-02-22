@@ -24,6 +24,9 @@ HectorStairDetection::HectorStairDetection(){
     nh.param("maxClusterXYDimension", maxClusterXYDimension_, 1.0);
     nh.param("minHightDistBetweenAllStairsPoints", minHightDistBetweenAllStairsPoints_, 0.2);
     nh.param("maxDistBetweenStairsPoints", maxDistBetweenStairsPoints_, 3.0);
+    nh.param("planeSegDistTresh", planeSegDistTresh_, 0.01);
+    nh.param("planeSegAngleEps", planeSegAngleEps_, 0.1);
+    nh.param("hesseTresh", hesseTresh_, 0.1);
 
     possible_stairs_cloud_pub_= nh.advertise<pcl::PointCloud<pcl::PointXYZI> >("/hector_stair_detection/possible_stairs_cloud", 100, true);
     points_on_line_cloud_debug_= nh.advertise<pcl::PointCloud<pcl::PointXYZI> >("/hector_stair_detection/point_on_line_debug", 100, true);
@@ -33,7 +36,8 @@ HectorStairDetection::HectorStairDetection(){
     stairs_position_and_orientaion_pub_= nh.advertise<geometry_msgs::PoseStamped>("/hector_stair_detection/stairs_orientation", 100, true);
     stairs_position_and_orientaion_with_direction_pub_= nh.advertise<hector_stair_detection_msgs::PositionAndOrientaion>("/hector_stair_detection/stairs_orientaion_as_vector", 100, true);
     border_and_orientation_stairs_combined_pub_= nh.advertise<hector_stair_detection_msgs::BorderAndOrientationOfStairs>("/hector_stair_detection/border_and_orientation_of_stairs", 100, true);
-
+    cloud_after_plane_detection_debug_pub_= nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/hector_stair_detection/cloud_after_plane_detection_debug_", 100, true);
+    line_marker_pub_= nh.advertise<visualization_msgs::Marker>("/hector_stair_detection/stairs_normal", 100, true);
 
     temp_orginal_pub_=nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/hector_stair_detection/temp_original", 100, true);
     temp_after_pass_trough_pub_=nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/hector_stair_detection/temp_after_pass_trough", 100, true);
@@ -65,8 +69,8 @@ HectorStairDetection::HectorStairDetection(){
         //            pointCloud_world=srv.response.cloud;
         pcl_sub = nh.subscribe("/worldmodel_main/pointcloud_vis", 10, &HectorStairDetection::PclCallback, this);
     }else{
-//        pcl_sub = nh.subscribe("/openni/depth/points", 1, &HectorStairDetection::PclCallback, this);
-                pcl_sub = nh.subscribe("/hector_octomap_server/octomap_point_cloud_centers", 1, &HectorStairDetection::PclCallback, this);
+        //        pcl_sub = nh.subscribe("/openni/depth/points", 1, &HectorStairDetection::PclCallback, this);
+        pcl_sub = nh.subscribe("/hector_octomap_server/octomap_point_cloud_centers", 1, &HectorStairDetection::PclCallback, this);
     }
 
 }
@@ -106,21 +110,6 @@ void HectorStairDetection::publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr
     border_and_orientation_msg.directionX=directionStairs(0);
     border_and_orientation_msg.directionY=directionStairs(1);
     border_and_orientation_msg.directionZ=directionStairs(2);
-
-    //refine orientaion (not working)
-    //    Eigen::Vector2f directionStairs2D;
-    //    directionStairs2D(0)=directionStairs(0);
-    //    directionStairs2D(1)=directionStairs(1);
-    //    Eigen::Vector2f minXminY;
-    //    minXminY(0)=stairs_boarder_marker.markers.at(0).pose.position.x;
-    //    minXminY(1)=stairs_boarder_marker.markers.at(0).pose.position.y;
-    //    Eigen::Vector2f maxXminY;
-    //    maxXminY(0)=stairs_boarder_marker.markers.at(3).pose.position.x;
-    //    maxXminY(1)=stairs_boarder_marker.markers.at(0).pose.position.y;
-    //    Eigen::Vector2f minXmaxY;
-    //    minXmaxY(0)=stairs_boarder_marker.markers.at(0).pose.position.x;
-    //    minXmaxY(1)=stairs_boarder_marker.markers.at(3).pose.position.y;
-    //    refineOrientaion(directionStairs2D, minXminY, maxXminY, minXmaxY, position_and_orientaion);
 
     if(border_and_orientation_stairs_combined_pub_.getNumSubscribers()>0){
         border_and_orientation_stairs_combined_pub_.publish(border_and_orientation_msg);
@@ -209,12 +198,6 @@ void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID,
         }
         cluster_counter=cluster_counter+1;
     }
-
-    //TODO::
-    //    //project end of stairs to the ground
-    //    if(minZ>0.1){
-    //        getEndOfStairs
-    //    }
 
     Eigen::Vector2f directionStairs;
     directionStairs(0)=directionS(0);
@@ -397,15 +380,15 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     pass.setFilterLimits(passThroughZMin_, passThroughZMax_);
     pass.filter(*processCloud_v1);
 
-//    pass.setInputCloud(processCloud_v1);
-//    pass.setFilterFieldName("y");
-//    pass.setFilterLimits(6.5, 7.3);
-//    pass.filter(*processCloud_v1);
+    //    pass.setInputCloud(processCloud_v1);
+    //    pass.setFilterFieldName("y");
+    //    pass.setFilterLimits(6.5, 7.3);
+    //    pass.filter(*processCloud_v1);
 
-//    pass.setInputCloud(processCloud_v1);
-//    pass.setFilterFieldName("x");
-//    pass.setFilterLimits(2.3, 5);
-//    pass.filter(*processCloud_v1);
+    //    pass.setInputCloud(processCloud_v1);
+    //    pass.setFilterFieldName("x");
+    //    pass.setFilterLimits(2.3, 5);
+    //    pass.filter(*processCloud_v1);
 
     temp_after_pass_trough_pub_.publish(processCloud_v1);
 
@@ -778,6 +761,14 @@ void HectorStairDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr&
                 }
                 if(maxDistBetweenPoints(debug_line_cloud) <= maxDistBetweenStairsPoints_ && minHightDistBetweenPoints(debug_line_cloud) >= minHightDistBetweenAllStairsPoints_){
                     ROS_INFO("Staris; number points on line: %i", pointsAtLineCounter);
+
+                    Eigen::Vector3f dir;
+                    if(avg_point_per_cluster.at(best_pair_idx2)(2) >=base(2)){
+                        dir=avg_point_per_cluster.at(best_pair_idx2)-base;
+                    }else{
+                        dir=base-avg_point_per_cluster.at(best_pair_idx2);
+                    }
+                    stairsSreachPlaneDetection(input_surface_cloud, debug_line_cloud, base, dir);
                     publishResults(input_surface_cloud, clusters, final_cluster_idx, base, direction+base);
                 }else{
                     ROS_INFO("No stairs, distance between points to large, or heightDistance between point too small");
@@ -793,6 +784,135 @@ void HectorStairDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr&
         ROS_INFO("No stairs");
     }
 
+}
+
+void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZI>::Ptr points_on_line, Eigen::Vector3f base, Eigen::Vector3f dir){
+    ROS_INFO("run plane segmentation");
+
+    Eigen::Vector3f temp=dir.cross(Eigen::Vector3f(0,0,1));
+    Eigen::Vector3f searchAxes=dir.cross(temp);
+    searchAxes=searchAxes*5;
+
+    visualization_msgs::Marker line_list;
+    line_list.header.frame_id=worldFrame_;
+    line_list.id = 42;
+    line_list.type = visualization_msgs::Marker::LINE_LIST;
+    line_list.scale.x = 0.1;
+    line_list.color.r = 1.0;
+    line_list.color.a = 1.0;
+
+    geometry_msgs::Point p;
+    p.x = base(0);
+    p.y = base(1);
+    p.z = base(2);
+
+    line_list.points.push_back(p);
+    p.x = base(0) + searchAxes(0);
+    p.y = base(1) + searchAxes(1);
+    p.z = base(2) + searchAxes(2);
+    line_list.points.push_back(p);
+
+    line_marker_pub_.publish(line_list);
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr searchCloud(new pcl::PointCloud<pcl::PointXYZ>());
+    searchCloud->resize(input_surface_cloud->size());
+    searchCloud->header.frame_id=worldFrame_;
+    for (size_t i = 0; i < input_surface_cloud->points.size(); ++i)
+    {
+        const pcl::PointNormal &mls_pt = input_surface_cloud->points[i];
+        pcl::PointXYZ pt(mls_pt.x, mls_pt.y, mls_pt.z);
+        searchCloud->push_back(pt);
+    }
+
+    //search just in stairs environment
+    Eigen::Vector2f xAxes;
+    xAxes(0)=1;
+    xAxes(1)=0;
+    Eigen::Vector2f dir2f;
+    dir2f(0)=dir(0);
+    dir2f(1)=dir(1);
+    float angleXToStairs=acos((dir2f.dot(xAxes))/(dir2f.norm()*xAxes.norm()));
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud_v1(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud_v2(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud(searchCloud);
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(passThroughZMin_, passThroughZMax_);
+    pass.filter(*processCloud_v1);
+
+    pass.setInputCloud(processCloud_v1);
+    pass.setFilterFieldName("y");
+    pass.setFilterLimits(base(1)-fabs(sin(angleXToStairs)*maxDistBetweenStairsPoints_)-maxClusterXYDimension_/2, base(1)+fabs(sin(angleXToStairs)*maxDistBetweenStairsPoints_)+maxClusterXYDimension_/2);
+    pass.filter(*processCloud_v2);
+
+    pass.setInputCloud(processCloud_v2);
+    pass.setFilterFieldName("x");
+    pass.setFilterLimits(base(0)-fabs(cos(angleXToStairs)*maxDistBetweenStairsPoints_)-maxClusterXYDimension_/2, base(0)+fabs(cos(angleXToStairs)*maxDistBetweenStairsPoints_)+maxClusterXYDimension_/2);
+    pass.filter(*searchCloud);
+
+        temp_after_pass_trough_pub_.publish(searchCloud);
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr planeCloud(new pcl::PointCloud<pcl::PointXYZ>());
+    planeCloud->header.frame_id=worldFrame_;
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    // Create the segmentation object
+    pcl::SACSegmentation<pcl::PointXYZ> seg;
+    seg.setModelType (pcl::SACMODEL_PERPENDICULAR_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setDistanceThreshold (planeSegDistTresh_);
+    seg.setAxis(searchAxes);
+    seg.setEpsAngle(planeSegAngleEps_);
+
+    seg.setInputCloud (searchCloud);
+    seg.segment (*inliers, *coefficients);
+
+    if (inliers->indices.size () == 0)
+    {
+        PCL_ERROR ("Could not estimate more planar models for the given dataset.");
+    }
+
+    ROS_DEBUG("extract plane and rest potins");
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    extract.setInputCloud (searchCloud);
+    extract.setIndices (inliers);
+    extract.setNegative(false);
+    extract.filter (*planeCloud);
+    planeCloud->header.frame_id=worldFrame_;
+
+    //check if plane contains stairs points
+    Eigen::Vector3f normal;
+    normal(0)=coefficients->values[0];
+    normal(1)=coefficients->values[1];
+    normal(2)=coefficients->values[2];
+
+    Eigen::Vector3f point;
+    point(0)=0;
+    point(1)=0;
+    point(2)=-(coefficients->values[3]/coefficients->values[2]);
+
+    Eigen::Vector3f normal_0;
+    normal_0= normal/normal.squaredNorm();
+
+    float d_hesse= point.dot(normal_0);
+
+    bool isPossiblePlane=true;
+    Eigen::Vector3f stairs_point;
+    for(int i=0; i<points_on_line->size(); i++){
+        stairs_point(0)=points_on_line->at(i).x;
+        stairs_point(1)=points_on_line->at(i).y;
+        stairs_point(2)=points_on_line->at(i).z;
+        std::cout<<"hesse distance: "<<fabs(stairs_point.dot(normal_0)-d_hesse) <<std::endl;
+        if(fabs(stairs_point.dot(normal_0)-d_hesse) > hesseTresh_){
+            isPossiblePlane=false;
+            break;
+        }
+    }
+
+    if(isPossiblePlane){
+            cloud_after_plane_detection_debug_pub_.publish(planeCloud);
+    }
 }
 
 float HectorStairDetection::maxDistBetweenPoints(pcl::PointCloud<pcl::PointXYZI>::Ptr input_cloud){
@@ -822,6 +942,7 @@ float HectorStairDetection::minHightDistBetweenPoints(pcl::PointCloud<pcl::Point
     }
     return min_dist;
 }
+
 }
 
 
