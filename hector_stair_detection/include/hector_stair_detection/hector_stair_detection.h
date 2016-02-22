@@ -108,16 +108,16 @@ private:
 
     void getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, pcl::PointCloud<pcl::PointNormal>::Ptr &output_cloud);
     void refineOrientaion(Eigen::Vector2f directionStairs, Eigen::Vector2f minXminY, Eigen::Vector2f maxXminY, Eigen::Vector2f minXmaxY, geometry_msgs::PoseStamped &position_and_orientaion);
-    void getFinalStairsCloud_and_position(std::string frameID, Eigen::Vector3f directionS, pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::IndicesClustersPtr cluster_indices, std::vector<int> final_cluster_idx,
+    void getFinalStairsCloud_and_position(std::string frameID, Eigen::Vector3f directionS, pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr &planeCloud, pcl::IndicesClustersPtr cluster_indices, std::vector<int> final_cluster_idx,
                                                                 pcl::PointCloud<pcl::PointXYZ>::Ptr &final_stairsCloud, visualization_msgs::MarkerArray &stairs_boarder_marker);
     void getStairsPositionAndOrientation(Eigen::Vector3f base, Eigen::Vector3f point, std::string frameID, Eigen::Vector3f &direction, geometry_msgs::PoseStamped &position_and_orientaion);
-    void publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud,
+    void publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr &planeCloud,
                                               pcl::IndicesClustersPtr cluster_indices, std::vector<int> final_cluster_idx, Eigen::Vector3f base, Eigen::Vector3f point);
     int getZComponent(Eigen::Vector2f directionStairs, Eigen::Vector2f minXminY, Eigen::Vector2f maxXminY, Eigen::Vector2f minXmaxY);
     float maxDistBetweenPoints(pcl::PointCloud<pcl::PointXYZI>::Ptr input_cloud);
     bool pointInCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud, pcl::PointXYZ point);
     float minHightDistBetweenPoints(pcl::PointCloud<pcl::PointXYZI>::Ptr input_cloud);
-    void stairsSreachPlaneDetection(pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZI>::Ptr points_on_line, Eigen::Vector3f base, Eigen::Vector3f dir);
+    void stairsSreachPlaneDetection(pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZI>::Ptr points_on_line, Eigen::Vector3f base, Eigen::Vector3f dir, pcl::PointCloud<pcl::PointXYZ>::Ptr &planeCloud);
 };
 }
 
