@@ -197,35 +197,52 @@ void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID,
         cluster_counter=cluster_counter+1;
     }
 
-    for(int i=0; i<planeCloud->size(); i++){
-        pcl::PointXYZ tempP;
-        tempP.x=planeCloud->at(i).x;
-        tempP.y=planeCloud->at(i).y;
-        tempP.z=planeCloud->at(i).z;
-        final_stairsCloud->points.push_back(tempP);
+    geometry_msgs::Vector3 minExtend;
+    minExtend.x = minExtend.y = minExtend.z = std::numeric_limits<geometry_msgs::Vector3::_x_type>::max();
+    geometry_msgs::Vector3 maxExtend;
+    maxExtend.x = maxExtend.y = maxExtend.z = -std::numeric_limits<geometry_msgs::Vector3::_x_type>::max();
 
-        if(tempP.x < minX){
-            minX=tempP.x;
-        }
+    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator itr = planeCloud->begin(); itr != planeCloud->end(); itr++){
+        const pcl::PointXYZ& p = *itr;
+        minExtend.x = std::min(minExtend.x, static_cast<double>(p.x));
+        minExtend.y = std::min(minExtend.y, static_cast<double>(p.y));
+        minExtend.z = std::min(minExtend.z, static_cast<double>(p.z));
+        maxExtend.x = std::max(maxExtend.x, static_cast<double>(p.x));
+        maxExtend.y = std::max(maxExtend.y, static_cast<double>(p.y));
+        maxExtend.z = std::max(maxExtend.z, static_cast<double>(p.z));
+    }
 
-        if(tempP.x > maxX){
-            maxX=tempP.x;
-        }
+    if(!(fabs(maxExtend.x - minExtend.x) > maxClusterXYDimension_ && fabs(maxExtend.y - minExtend.y) > maxClusterXYDimension_)){
+        for(int i=0; i<planeCloud->size(); i++){
+            pcl::PointXYZ tempP;
+            tempP.x=planeCloud->at(i).x;
+            tempP.y=planeCloud->at(i).y;
+            tempP.z=planeCloud->at(i).z;
+            final_stairsCloud->points.push_back(tempP);
 
-        if(tempP.y < minY){
-            minY=tempP.y;
-        }
+            if(tempP.x < minX){
+                minX=tempP.x;
+            }
 
-        if(tempP.y > maxY){
-            maxY=tempP.y;
-        }
+            if(tempP.x > maxX){
+                maxX=tempP.x;
+            }
 
-        if(tempP.z < minZ){
-            minZ=tempP.z;
-        }
+            if(tempP.y < minY){
+                minY=tempP.y;
+            }
 
-        if(tempP.z > maxZ){
-            maxZ=tempP.z;
+            if(tempP.y > maxY){
+                maxY=tempP.y;
+            }
+
+            if(tempP.z < minZ){
+                minZ=tempP.z;
+            }
+
+            if(tempP.z > maxZ){
+                maxZ=tempP.z;
+            }
         }
     }
 
@@ -328,6 +345,7 @@ void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID,
         marker.color.b = 0.0;
 
         stairs_boarder_marker.markers.push_back(marker);
+
     }
 }
 
@@ -868,7 +886,7 @@ void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::Point
     pcl::PassThrough<pcl::PointXYZ> pass;
     pass.setInputCloud(searchCloud);
     pass.setFilterFieldName("z");
-    pass.setFilterLimits(passThroughZMin_, passThroughZMax_);
+    pass.setFilterLimits(0.1, passThroughZMax_);
     pass.filter(*processCloud_v1);
 
     pass.setInputCloud(processCloud_v1);
@@ -881,7 +899,7 @@ void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::Point
     pass.setFilterLimits(base(0)-fabs(cos(angleXToStairs)*maxDistBetweenStairsPoints_)-maxClusterXYDimension_/2, base(0)+fabs(cos(angleXToStairs)*maxDistBetweenStairsPoints_)+maxClusterXYDimension_/2);
     pass.filter(*searchCloud);
 
-        temp_after_pass_trough_pub_.publish(searchCloud);
+    temp_after_pass_trough_pub_.publish(searchCloud);
 
     planeCloud->header.frame_id=worldFrame_;
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -940,7 +958,9 @@ void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::Point
     }
 
     if(isPossiblePlane){
-            cloud_after_plane_detection_debug_pub_.publish(planeCloud);
+        cloud_after_plane_detection_debug_pub_.publish(planeCloud);
+    }else{
+        planeCloud->resize(0);
     }
 }
 

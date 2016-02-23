@@ -1,5 +1,5 @@
 passThroughZMin: 0.05
-passThroughZMax: 3.0
+passThroughZMax: 3
 voxelGridX: 0.04
 voxelGridY: 0.04
 voxelGridZ: 0.04
@@ -10,7 +10,7 @@ worldFrame: /map
 clusterHeightTresh: 0.4
 maxClusterXYDimension: 1.5
 clusterTolerance: 0.1;
-clusterMinSize: 50
+clusterMinSize: 20
 clusterMaxSize: 300
 setup: hector
 maxDistBetweenStairsPoints: 3.0
@@ -18,3 +18,4 @@ minHightDistBetweenAllStairsPoints: 0.02
 planeSegDistTresh: 0.05
 planeSegAngleEps: 0.2
 hesseTresh: 0.1
+maxStairsWidth: 1.5
