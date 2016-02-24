@@ -9,13 +9,13 @@ refineSurfaceRequired: false
 worldFrame: /map
 clusterHeightTresh: 0.4
 maxClusterXYDimension: 1.5
-clusterTolerance: 0.1;
+clusterTolerance: 0.05;
 clusterMinSize: 20
 clusterMaxSize: 300
 setup: hector
 maxDistBetweenStairsPoints: 3.0
 minHightDistBetweenAllStairsPoints: 0.02
-planeSegDistTresh: 0.05
-planeSegAngleEps: 0.2
-hesseTresh: 0.1
+planeSegDistTresh: 0.03
+planeSegAngleEps: 0.1
+hesseTresh: 0.2
 maxStairsWidth: 1.5

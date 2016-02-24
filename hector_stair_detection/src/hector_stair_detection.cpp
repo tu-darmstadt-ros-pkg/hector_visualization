@@ -272,16 +272,12 @@ void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID,
             marker.pose.position.y = minY;
             switch(componetOfDirection) {
             case 1: marker.pose.position.z=maxZ;
-                std::cout<<"1"<<std::endl;
                 break;
             case 2: marker.pose.position.z=maxZ;
-                std::cout<<"2"<<std::endl;
                 break;
             case 3: marker.pose.position.z=minZ;
-                std::cout<<"3"<<std::endl;
                 break;
             case 4: marker.pose.position.z=minZ;
-                std::cout<<"4"<<std::endl;
                 break;
 
             }
@@ -382,39 +378,6 @@ int HectorStairDetection::getZComponent(Eigen::Vector2f directionStairs, Eigen::
     }
 }
 
-void HectorStairDetection::refineOrientaion(Eigen::Vector2f directionStairs, Eigen::Vector2f minXminY, Eigen::Vector2f maxXminY, Eigen::Vector2f minXmaxY, geometry_msgs::PoseStamped &position_and_orientaion){
-    Eigen::Vector2f direction1;
-    Eigen::Vector2f direction2;
-
-    direction1=maxXminY-minXminY;
-    direction2=minXmaxY-minXminY;
-
-    float angle1=acos((directionStairs.dot(direction1))/(directionStairs.norm()*direction1.norm()));
-    float angle2=acos((directionStairs.dot(direction2))/(directionStairs.norm()*direction2.norm()));
-
-    angle1= angle1 -(M_PI*floor(angle1/M_PI));
-    angle2= angle2 -(M_PI*floor(angle2/M_PI));
-
-    double refined_yaw;
-    if(angle1>angle2){
-        refined_yaw=atan2(direction1(1), direction1(0));
-    }else{
-        refined_yaw=atan2(direction2(1), direction2(0));
-    }
-
-    tf::Quaternion q_tf;
-    tf::quaternionMsgToTF(position_and_orientaion.pose.orientation, q_tf);
-
-    double r, p, y;
-    tf::Matrix3x3(q_tf).getEulerZYX(y,p,r);
-    tf::Quaternion temp;
-    temp.setEulerZYX(refined_yaw,p,0.0);
-    position_and_orientaion.pose.orientation.x=temp.getX();
-    position_and_orientaion.pose.orientation.y=temp.getY();
-    position_and_orientaion.pose.orientation.z=temp.getZ();
-    position_and_orientaion.pose.orientation.w=temp.getW();
-}
-
 void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr &input_cloud, pcl::PointCloud<pcl::PointNormal>::Ptr &output_cloud){
     ROS_INFO("Hector Stair Detection get Surface");
     pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud_v1(new pcl::PointCloud<pcl::PointXYZ>());
@@ -438,7 +401,7 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     //    pass.setFilterLimits(2.3, 5);
     //    pass.filter(*processCloud_v1);
 
-    temp_after_pass_trough_pub_.publish(processCloud_v1);
+//    temp_after_pass_trough_pub_.publish(processCloud_v1);
 
     pcl::VoxelGrid<pcl::PointXYZ> vox;
     vox.setInputCloud(processCloud_v1);
@@ -886,7 +849,7 @@ void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::Point
     pcl::PassThrough<pcl::PointXYZ> pass;
     pass.setInputCloud(searchCloud);
     pass.setFilterFieldName("z");
-    pass.setFilterLimits(0.1, passThroughZMax_);
+    pass.setFilterLimits(0.2, passThroughZMax_);
     pass.filter(*processCloud_v1);
 
     pass.setInputCloud(processCloud_v1);

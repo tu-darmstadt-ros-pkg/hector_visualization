@@ -118,6 +118,7 @@ private:
     bool pointInCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud, pcl::PointXYZ point);
     float minHightDistBetweenPoints(pcl::PointCloud<pcl::PointXYZI>::Ptr input_cloud);
     void stairsSreachPlaneDetection(pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZI>::Ptr points_on_line, Eigen::Vector3f base, Eigen::Vector3f dir, pcl::PointCloud<pcl::PointXYZ>::Ptr &planeCloud);
+    bool checkExtentionDirection(Eigen::Vector2f directionStairs, Eigen::Vector2f directionExtend);
 };
 }
 
