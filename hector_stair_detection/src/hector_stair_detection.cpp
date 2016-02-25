@@ -70,7 +70,8 @@ HectorStairDetection::HectorStairDetection(){
         pcl_sub = nh.subscribe("/worldmodel_main/pointcloud_vis", 10, &HectorStairDetection::PclCallback, this);
     }else{
         //        pcl_sub = nh.subscribe("/openni/depth/points", 1, &HectorStairDetection::PclCallback, this);
-        pcl_sub = nh.subscribe("/hector_octomap_server/octomap_point_cloud_centers", 1, &HectorStairDetection::PclCallback, this);
+//        pcl_sub = nh.subscribe("/hector_octomap_server/octomap_point_cloud_centers", 1, &HectorStairDetection::PclCallback, this);
+        pcl_sub = nh.subscribe("/hector_aggregate_cloud/aggregated_cloud", 1, &HectorStairDetection::PclCallback, this);
     }
 
 }
@@ -401,7 +402,7 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     //    pass.setFilterLimits(2.3, 5);
     //    pass.filter(*processCloud_v1);
 
-//    temp_after_pass_trough_pub_.publish(processCloud_v1);
+    temp_after_pass_trough_pub_.publish(processCloud_v1);
 
     pcl::VoxelGrid<pcl::PointXYZ> vox;
     vox.setInputCloud(processCloud_v1);
@@ -412,7 +413,7 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     temp_after_voxel_grid_pub_.publish(processCloud_v2);
 
     pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
-    mls.setSearchRadius(0.1);
+    mls.setSearchRadius(0.05);
     mls.setPolynomialOrder(1);
     mls.setComputeNormals(true);
     mls.setInputCloud(processCloud_v2);
@@ -423,54 +424,24 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
 
     temp_after_mls_pub_.publish(point_cloud_mls_normal);
 
-    float x;
-    float y;
-    float z;
-    float n_x;
-    float n_y;
-    float n_z;
+//    pcl::NormalEstimation<pcl::PointXYZ, pcl::PointNormal> ne;
+//    ne.setInputCloud (processCloud_v2);
+//      pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
+//      ne.setSearchMethod (tree);
+//      // Output datasets
+//      pcl::PointCloud<pcl::PointNormal>::Ptr point_cloud_mls_normal (new pcl::PointCloud<pcl::PointNormal>);
+//      // Use all neighbors in a sphere of radius 3cm
+//      ne.setRadiusSearch (0.03);
+//      // Compute the features
+//      ne.compute (*point_cloud_mls_normal);
+
+//    temp_after_mls_pub_.publish(point_cloud_mls_normal);
 
     output_cloud->clear();
     output_cloud->header.frame_id=input_cloud->header.frame_id;
-    if(!refineSurfaceRequired_){
-        output_cloud.reset(new pcl::PointCloud<pcl::PointNormal>(*point_cloud_mls_normal));
-    }else{
-        bool  pushback=true;
-        for(int i=0; i<point_cloud_mls_normal->size(); i++){
-            pushback=true;
-            x = point_cloud_mls_normal->at(i).x;
-            y = point_cloud_mls_normal->at(i).y;
-            z = point_cloud_mls_normal->at(i).z;
-            n_x = point_cloud_mls_normal->at(i).normal_x;
-            n_y = point_cloud_mls_normal->at(i).normal_y;
-            n_z = point_cloud_mls_normal->at(i).normal_z;
-            std::vector<int> eraseIdx;
-            for(int j=0; j<output_cloud->size(); j++){
-                if(fabs(output_cloud->at(j).x - x) < 0.01 && fabs(output_cloud->at(j).y - y)<0.01){
-                    if(z > output_cloud->at(j).z){
-                        eraseIdx.push_back(j);
-                    }else{
-                        pushback=false;
-                    }
-                }
-            }
 
-            for(int c=0; c<eraseIdx.size(); c++){
-                output_cloud->erase(output_cloud->begin()+eraseIdx.at(c));
-            }
+    output_cloud.reset(new pcl::PointCloud<pcl::PointNormal>(*point_cloud_mls_normal));
 
-            if(pushback){
-                pcl::PointNormal pushbackN;
-                pushbackN.x=x;
-                pushbackN.y=y;
-                pushbackN.z=z;
-                pushbackN.normal_x=n_x;
-                pushbackN.normal_y=n_y;
-                pushbackN.normal_z=n_z;
-                output_cloud->push_back(pushbackN);
-            }
-        }
-    }
 
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(*output_cloud,*output_cloud, indices);
@@ -487,7 +458,7 @@ bool customRegionGrowing (const pcl::PointNormal& point_a, const pcl::PointNorma
     Eigen::Vector3f d1(1,0,0);
     Eigen::Vector3f d2(0,1,0);
 
-    if(fabs(d1.dot(point_b_normal)) < 0.5 && fabs(d2.dot(point_b_normal)) < 0.5){
+    if(fabs(d1.dot(point_b_normal)) < 0.2 && fabs(d2.dot(point_b_normal)) < 0.2){
         return true;
     }
     return false;
@@ -779,7 +750,8 @@ void HectorStairDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr&
                         dir=base-avg_point_per_cluster.at(best_pair_idx2);
                     }
                     pcl::PointCloud<pcl::PointXYZ>::Ptr planeCloud(new pcl::PointCloud<pcl::PointXYZ>());
-                    stairsSreachPlaneDetection(input_surface_cloud, debug_line_cloud, base, dir, planeCloud);
+                    //is not needed while detecting stairs on unfilterd scancloud
+//                    stairsSreachPlaneDetection(input_surface_cloud, debug_line_cloud, base, dir, planeCloud);
                     publishResults(input_surface_cloud, planeCloud, clusters, final_cluster_idx, base, direction+base);
                 }else{
                     ROS_INFO("No stairs, distance between points to large, or heightDistance between point too small");
