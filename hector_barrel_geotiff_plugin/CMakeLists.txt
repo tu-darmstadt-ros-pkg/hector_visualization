@@ -4,7 +4,7 @@ project(hector_barrel_geotiff_plugin)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS hector_geotiff hector_nav_msgs pcl_ros)
+find_package(catkin REQUIRED COMPONENTS hector_geotiff hector_nav_msgs hector_worldmodel_msgs pcl_ros)
 find_package(OpenCV REQUIRED)
 #find_package(PCL REQUIRED)
 ## System dependencies are found with CMake's conventions
