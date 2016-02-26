@@ -885,7 +885,7 @@ void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::Point
         stairs_point(0)=points_on_line->at(i).x;
         stairs_point(1)=points_on_line->at(i).y;
         stairs_point(2)=points_on_line->at(i).z;
-
+//        std::cout<<"hesse distance: "<<fabs(stairs_point.dot(normal_0)-d_hesse) <<std::endl;
         if(fabs(stairs_point.dot(normal_0)-d_hesse) > hesseTresh_){
             isPossiblePlane=false;
             break;
