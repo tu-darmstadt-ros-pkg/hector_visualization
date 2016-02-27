@@ -344,6 +344,33 @@ void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID,
         stairs_boarder_marker.markers.push_back(marker);
 
     }
+    projectStairsToFloor(directionS, stairs_boarder_marker);
+}
+
+void HectorStairDetection::projectStairsToFloor(Eigen::Vector3f direction, visualization_msgs::MarkerArray &stairs_boarder_marker){
+ float first_step_z=0.2;
+ float minZ= FLT_MAX;
+ int minPos1;
+ int minPos2;
+ for(int i=0; i<stairs_boarder_marker.markers.size(); i++){
+     if(stairs_boarder_marker.markers.at(i).pose.position.z <minZ){
+         minPos1=i;
+     }
+ }
+
+ minZ= FLT_MAX;
+ for(int i=0; i<stairs_boarder_marker.markers.size(); i++){
+     if(i != minPos1 && stairs_boarder_marker.markers.at(i).pose.position.z <minZ){
+         minPos2=i;
+     }
+ }
+
+ stairs_boarder_marker.markers.at(minPos1).pose.position.x=stairs_boarder_marker.markers.at(minPos1).pose.position.x-stairs_boarder_marker.markers.at(minPos1).pose.position.z/direction(2)*direction(0)+first_step_z;
+ stairs_boarder_marker.markers.at(minPos1).pose.position.y=stairs_boarder_marker.markers.at(minPos1).pose.position.y-stairs_boarder_marker.markers.at(minPos1).pose.position.z/direction(2)*direction(1)+first_step_z;
+ stairs_boarder_marker.markers.at(minPos1).pose.position.z=first_step_z;
+ stairs_boarder_marker.markers.at(minPos2).pose.position.x=stairs_boarder_marker.markers.at(minPos2).pose.position.x-stairs_boarder_marker.markers.at(minPos2).pose.position.z/direction(2)*direction(0)+first_step_z;
+ stairs_boarder_marker.markers.at(minPos2).pose.position.y=stairs_boarder_marker.markers.at(minPos2).pose.position.y-stairs_boarder_marker.markers.at(minPos2).pose.position.z/direction(2)*direction(1)+first_step_z;
+ stairs_boarder_marker.markers.at(minPos2).pose.position.z=first_step_z;
 }
 
 int HectorStairDetection::getZComponent(Eigen::Vector2f directionStairs, Eigen::Vector2f minXminY, Eigen::Vector2f maxXminY, Eigen::Vector2f minXmaxY){

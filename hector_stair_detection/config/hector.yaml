@@ -8,8 +8,8 @@ minRequiredPointsOnLine: 4
 distanceToLineTresh: 0.1
 refineSurfaceRequired: false
 worldFrame: /map
-clusterHeightTresh: 0.5
-maxClusterXYDimension: 2
+clusterHeightTresh: 0.2
+maxClusterXYDimension: 1.5
 clusterTolerance: 0.05;
 clusterMinSize: 50
 clusterMaxSize: 500
