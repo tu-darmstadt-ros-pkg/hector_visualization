@@ -419,15 +419,15 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     pass.setFilterLimits(passThroughZMin_, passThroughZMax_);
     pass.filter(*processCloud_v1);
 
-    //    pass.setInputCloud(processCloud_v1);
-    //    pass.setFilterFieldName("y");
-    //    pass.setFilterLimits(6.5, 7.3);
-    //    pass.filter(*processCloud_v1);
+        pass.setInputCloud(processCloud_v1);
+        pass.setFilterFieldName("y");
+        pass.setFilterLimits(-1.0, 1.0);
+        pass.filter(*processCloud_v1);
 
-    //    pass.setInputCloud(processCloud_v1);
-    //    pass.setFilterFieldName("x");
-    //    pass.setFilterLimits(2.3, 5);
-    //    pass.filter(*processCloud_v1);
+        pass.setInputCloud(processCloud_v1);
+        pass.setFilterFieldName("x");
+        pass.setFilterLimits(0.0, 4.0);
+        pass.filter(*processCloud_v1);
 
     temp_after_pass_trough_pub_.publish(processCloud_v1);
 
