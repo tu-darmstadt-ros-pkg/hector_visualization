@@ -281,16 +281,17 @@ void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID,
         stairs_boarder_marker.markers.push_back(marker);
 
     }
-    //    projectStairsToFloor(directionS, stairs_boarder_marker);
+        projectStairsToFloor(directionS, stairs_boarder_marker);
 }
 
 void HectorStairDetection::projectStairsToFloor(Eigen::Vector3f direction, visualization_msgs::MarkerArray &stairs_boarder_marker){
-    float first_step_z=0.2;
+    float first_step_z=0.05;
     float minZ= FLT_MAX;
     int minPos1;
     int minPos2;
     for(int i=0; i<stairs_boarder_marker.markers.size(); i++){
         if(stairs_boarder_marker.markers.at(i).pose.position.z <minZ){
+            minZ=stairs_boarder_marker.markers.at(i).pose.position.z;
             minPos1=i;
         }
     }
@@ -298,6 +299,7 @@ void HectorStairDetection::projectStairsToFloor(Eigen::Vector3f direction, visua
     minZ= FLT_MAX;
     for(int i=0; i<stairs_boarder_marker.markers.size(); i++){
         if(i != minPos1 && stairs_boarder_marker.markers.at(i).pose.position.z <minZ){
+            minZ=stairs_boarder_marker.markers.at(i).pose.position.z;
             minPos2=i;
         }
     }
@@ -356,15 +358,15 @@ void HectorStairDetection::getPreprocessedCloud(pcl::PointCloud<pcl::PointXYZ>::
     pass.setFilterLimits(passThroughZMin_, passThroughZMax_);
     pass.filter(*processCloud_v1);
 
-            pass.setInputCloud(processCloud_v1);
-            pass.setFilterFieldName("y");
-            pass.setFilterLimits(-1.0, 1.0);
-            pass.filter(*processCloud_v1);
+//            pass.setInputCloud(processCloud_v1);
+//            pass.setFilterFieldName("y");
+//            pass.setFilterLimits(-1.0, 1.0);
+//            pass.filter(*processCloud_v1);
 
-            pass.setInputCloud(processCloud_v1);
-            pass.setFilterFieldName("x");
-            pass.setFilterLimits(0.0, 3.5);
-            pass.filter(*processCloud_v1);
+//            pass.setInputCloud(processCloud_v1);
+//            pass.setFilterFieldName("x");
+//            pass.setFilterLimits(0.0, 3.5);
+//            pass.filter(*processCloud_v1);
 
     temp_after_pass_trough_pub_.publish(processCloud_v1);
 
