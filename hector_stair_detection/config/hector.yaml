@@ -1,5 +1,5 @@
 passThroughZMin: -0.1
-passThroughZMax: 1.3
+passThroughZMax: 2.5
 voxelGridX: 0.04
 voxelGridY: 0.04
 voxelGridZ: 0.04
@@ -9,7 +9,7 @@ refineSurfaceRequired: false
 worldFrame: /map
 clusterHeightTresh: 0.3
 maxClusterXYDimension: 2
-clusterTolerance: 0.05
+clusterTolerance: 0.1
 clusterMinSize: 50
 clusterMaxSize: 600
 setup: hector

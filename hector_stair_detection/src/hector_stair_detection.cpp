@@ -94,7 +94,7 @@ void HectorStairDetection::publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr
     //compute and pubish max and min boarder of the stairs
     pcl::PointCloud<pcl::PointXYZ>::Ptr final_stairsCloud(new pcl::PointCloud<pcl::PointXYZ>);
     visualization_msgs::MarkerArray stairs_boarder_marker;
-    getFinalStairsCloud_and_position(input_surface_cloud->header.frame_id, directionStairs, input_surface_cloud, planeCloud, cluster_indices, final_cluster_idx, final_stairsCloud, stairs_boarder_marker);
+    getFinalStairsCloud_and_position(input_surface_cloud->header.frame_id, directionStairs, input_surface_cloud, planeCloud, cluster_indices, final_cluster_idx, final_stairsCloud, stairs_boarder_marker, base);
 
     if(final_stairs_cloud_pub_.getNumSubscribers()>0){
         final_stairs_cloud_pub_.publish(final_stairsCloud);
@@ -124,19 +124,20 @@ void HectorStairDetection::publishResults(pcl::PointCloud<pcl::PointNormal>::Ptr
     }
 }
 
-void HectorStairDetection::getStairsPositionAndOrientation(Eigen::Vector3f base, Eigen::Vector3f point, std::string frameID, Eigen::Vector3f &direction, geometry_msgs::PoseStamped &position_and_orientaion){
-    if(point(2) >=base(2)){
-        direction=point-base;
-    }else{
-        direction=base-point;
-    }
-
+void HectorStairDetection::getStairsPositionAndOrientation(Eigen::Vector3f &base, Eigen::Vector3f point, std::string frameID, Eigen::Vector3f &direction, geometry_msgs::PoseStamped &position_and_orientaion){
     Eigen::Vector3f stairs_position= 0.5*(base + point);
 
     position_and_orientaion.header.frame_id=frameID;
     position_and_orientaion.pose.position.x=stairs_position(0);
     position_and_orientaion.pose.position.y=stairs_position(1);
     position_and_orientaion.pose.position.z=stairs_position(2);
+
+    if(point(2) >=base(2)){
+        direction=point-base;
+    }else{
+        direction=base-point;
+        base=point;
+    }
     float stairs_yaw= atan2(direction(1), direction(0));
     float staris_pitch= atan2(direction(1)*sin(stairs_yaw)+direction(0)*cos(stairs_yaw), direction(2))+M_PI_2;
     tf::Quaternion temp;
@@ -148,13 +149,43 @@ void HectorStairDetection::getStairsPositionAndOrientation(Eigen::Vector3f base,
 }
 
 void HectorStairDetection::getFinalStairsCloud_and_position(std::string frameID, Eigen::Vector3f directionS, pcl::PointCloud<pcl::PointNormal>::Ptr &input_surface_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr &planeCloud, pcl::IndicesClustersPtr cluster_indices, std::vector<int> final_cluster_idx,
-                                                            pcl::PointCloud<pcl::PointXYZ>::Ptr &final_stairsCloud, visualization_msgs::MarkerArray &stairs_boarder_marker){
+                                                            pcl::PointCloud<pcl::PointXYZ>::Ptr &final_stairsCloud, visualization_msgs::MarkerArray &stairs_boarder_marker, Eigen::Vector3f base){
     int cluster_counter=0;
     float minZ= FLT_MAX;
     float maxZ= -FLT_MAX;
     int minZIndex=-1;
     int maxZIndex=-1;
     final_stairsCloud->header.frame_id=frameID;
+//    make use of the plane cloud
+//    if(planeCloud->size() !=0){
+//        Eigen::Vector3f orthogonalDir=directionS.cross(Eigen::Vector3f(0,0,1));
+//        Eigen::Vector3f point;
+//        pcl::PointCloud<pcl::PointXYZ>::Ptr testCloud(new pcl::PointCloud<pcl::PointXYZ>());
+//        testCloud->header.frame_id=frameID;
+//        for(int i=0; i<planeCloud->size(); i++){
+//            point(0)=planeCloud->points.at(i).x;
+//            point(1)=planeCloud->points.at(i).y;
+//            point(2)=planeCloud->points.at(i).z;
+//            //TODO:: check angle
+////            float angle=acos((directionS.dot(point-base))/(directionS.norm()*(point-base).norm()));
+//            float angle=acos((orthogonalDir.dot(point-base))/(orthogonalDir.norm()*(point-base).norm()));
+
+//            ROS_INFO("ange: %f", angle);
+//            if(angle < M_PI_2){
+//                testCloud->push_back(planeCloud->points.at(i));
+//            }
+
+//            //compute distance
+//            float tempA= std::sqrt(directionS.cross(point-base).dot(directionS.cross(point-base)));
+//            float lengthDirection= std::sqrt(directionS.dot(directionS));
+//            float distance= tempA/lengthDirection;
+
+//            //save max depening on sign
+
+
+//        }
+//        cloud_after_plane_detection_debug_pub_.publish(testCloud);
+//    }
 
     for (int i = 0; i < cluster_indices->size (); ++i){
         std::vector<int>::iterator idx_it;
@@ -304,11 +335,11 @@ void HectorStairDetection::projectStairsToFloor(Eigen::Vector3f direction, visua
         }
     }
 
-    stairs_boarder_marker.markers.at(minPos1).pose.position.x=stairs_boarder_marker.markers.at(minPos1).pose.position.x-stairs_boarder_marker.markers.at(minPos1).pose.position.z/direction(2)*direction(0)+first_step_z;
-    stairs_boarder_marker.markers.at(minPos1).pose.position.y=stairs_boarder_marker.markers.at(minPos1).pose.position.y-stairs_boarder_marker.markers.at(minPos1).pose.position.z/direction(2)*direction(1)+first_step_z;
+    stairs_boarder_marker.markers.at(minPos1).pose.position.x=stairs_boarder_marker.markers.at(minPos1).pose.position.x+(first_step_z-stairs_boarder_marker.markers.at(minPos1).pose.position.z)/direction(2)*direction(0);
+    stairs_boarder_marker.markers.at(minPos1).pose.position.y=stairs_boarder_marker.markers.at(minPos1).pose.position.y+(first_step_z-stairs_boarder_marker.markers.at(minPos1).pose.position.z)/direction(2)*direction(1);
     stairs_boarder_marker.markers.at(minPos1).pose.position.z=first_step_z;
-    stairs_boarder_marker.markers.at(minPos2).pose.position.x=stairs_boarder_marker.markers.at(minPos2).pose.position.x-stairs_boarder_marker.markers.at(minPos2).pose.position.z/direction(2)*direction(0)+first_step_z;
-    stairs_boarder_marker.markers.at(minPos2).pose.position.y=stairs_boarder_marker.markers.at(minPos2).pose.position.y-stairs_boarder_marker.markers.at(minPos2).pose.position.z/direction(2)*direction(1)+first_step_z;
+    stairs_boarder_marker.markers.at(minPos2).pose.position.x=stairs_boarder_marker.markers.at(minPos2).pose.position.x+(first_step_z-stairs_boarder_marker.markers.at(minPos2).pose.position.z)/direction(2)*direction(0);
+    stairs_boarder_marker.markers.at(minPos2).pose.position.y=stairs_boarder_marker.markers.at(minPos2).pose.position.y+(first_step_z-stairs_boarder_marker.markers.at(minPos2).pose.position.z)/direction(2)*direction(1);
     stairs_boarder_marker.markers.at(minPos2).pose.position.z=first_step_z;
 }
 
@@ -738,7 +769,7 @@ void HectorStairDetection::PclCallback(const sensor_msgs::PointCloud2::ConstPtr&
                     }
                     pcl::PointCloud<pcl::PointXYZ>::Ptr planeCloud(new pcl::PointCloud<pcl::PointXYZ>());
                     //is not needed while detecting stairs on unfilterd scancloud
-                    //                    stairsSreachPlaneDetection(input_surface_cloud, debug_line_cloud, base, dir, planeCloud);
+//                                        stairsSreachPlaneDetection(input_surface_cloud, debug_line_cloud, base, dir, planeCloud);
                     publishResults(input_surface_cloud, planeCloud, clusters, final_cluster_idx, base, direction+base);
                 }else{
                     ROS_INFO("No stairs, distance between points to large, or heightDistance between point too small");
@@ -879,6 +910,7 @@ void HectorStairDetection::stairsSreachPlaneDetection(pcl::PointCloud<pcl::Point
     }
 
     if(isPossiblePlane){
+        ROS_INFO("staris plane found");
         cloud_after_plane_detection_debug_pub_.publish(planeCloud);
     }else{
         planeCloud->resize(0);
