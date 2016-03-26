@@ -13,3 +13,4 @@ int32 number_of_points
 float32 directionX
 float32 directionY
 float32 directionZ
+bool clearStairsInformation
