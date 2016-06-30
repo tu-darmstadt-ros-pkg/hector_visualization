@@ -2,48 +2,67 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
 
-ros::Publisher co2Pub;
 ros::Publisher detectedPub;
 
-float avg;
+ros::Time start;
+ros::Time detectTime;
 
-float threshold;
+float threshold = 5;
+float init = 0.0;
+bool detected = false;
+std_msgs::Bool bool_msg;
 
-float scale;
+float init_time = 1.0;
+float detection_timeout = 3.0;
 
 void co2_callback(const std_msgs::Float32::ConstPtr &msg){
     ROS_DEBUG("CO2 Callback");
-    ROS_DEBUG("avg_old: %f", avg);
-    avg = 0.9 * avg + 0.1 * msg->data;
 
-    ROS_DEBUG("avg: %f", avg);
-    double value = fabs(msg->data - avg);
+    if((ros::Time::now() - start).toSec() < init_time){
+      //ROS_INFO("Init");
+      init = msg->data;
+      return;
+    }
 
-    ROS_DEBUG("Value: %f", value);
-    std_msgs::Float32 value_msg;
-    value_msg.data = scale * value;
-    co2Pub.publish(value_msg);
+    //ROS_INFO_THROTTLE(1, "time: %f", (ros::Time::now()- detectTime ).toSec());
+    if(!detected && (msg->data - init) > threshold ){
+      ROS_INFO("detect!");
+      detectTime = ros::Time::now();
+      bool_msg.data = true;
+      detected = true;
+    }else if(detected && (ros::Time::now()-detectTime).toSec() > detection_timeout){
+      ROS_INFO("detect timeout");
+      detected = false;
+      bool_msg.data = false;
+      init = msg->data;
+    }
 
-    std_msgs::Bool bool_msg;
-    bool_msg.data = value > threshold;
+    if((init - msg->data) > 10){
+      ROS_INFO("Resetting init");
+      init = msg->data;
+    }
+
     detectedPub.publish(bool_msg);
 
 }
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "hector_barrel_detection");
+    ros::init(argc, argv, "hector_co2_processing");
+
 
     ros::NodeHandle nh_;
 
-    avg = 0;
-    threshold = 50;
-    scale = 75.0;
 
-    ros::Subscriber co2Sub = nh_.subscribe("/co2raw", 100, &co2_callback);
+    ros::Subscriber co2Sub = nh_.subscribe("input", 100, &co2_callback);
 
-    co2Pub = nh_.advertise<std_msgs::Float32>("/co2", 100);
-    detectedPub = nh_.advertise<std_msgs::Bool>("/co2detected", 100);
+    detectedPub = nh_.advertise<std_msgs::Bool>("detected", 100);
+
+    bool_msg.data = false;
+
+
+    start = ros::Time::now();
+    detectTime = ros::Time::now();
 
     ros::spin();
     exit(0);

@@ -2,7 +2,9 @@
 
 <launch>
 
-   <node name="co2_processor" pkg="hector_co2_processing" type="hector_co2_processing_node" output="screen" >
+   <node name="co2_processor_front" pkg="hector_co2_processing" type="hector_co2_processing_node" output="screen" >
+     <remap from="input" to="/co2" />
+     <remap from="detected" to="/co2detected" />
    </node>
 
 </launch>
