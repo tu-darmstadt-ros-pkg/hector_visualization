@@ -40,9 +40,9 @@ int main(int argc, char **argv)
     threshold = 50;
     scale = 75.0;
 
-    ros::Subscriber co2Sub = nh_.subscribe("/co2raw", 100, &co2_callback);
+    ros::Subscriber co2Sub = nh_.subscribe("/co2", 100, &co2_callback);
 
-    co2Pub = nh_.advertise<std_msgs::Float32>("/co2", 100);
+    co2Pub = nh_.advertise<std_msgs::Float32>("/processed_co2", 100);
     detectedPub = nh_.advertise<std_msgs::Bool>("/co2detected", 100);
 
     ros::spin();
