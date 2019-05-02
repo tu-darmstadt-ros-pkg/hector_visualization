@@ -32,7 +32,7 @@ void co2_callback(const std_msgs::Float32::ConstPtr &msg){
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "hector_barrel_detection");
+    ros::init(argc, argv, "hector_co2_processing_node");
 
     ros::NodeHandle nh_;
 
