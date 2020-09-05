@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(hector_veil_geotiff_plugin)
 
 ## Find catkin macros and libraries
